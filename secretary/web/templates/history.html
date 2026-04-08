@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% set active_page = "history" %}
+
+{% block title %}History - Secretary{% endblock %}
+{% block page_title %}Action History{% endblock %}
+
+{% block content %}
+{% if actions %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full" id="history-table">
+      <thead>
+        <tr class="border-b border-slate-200 bg-slate-50/60">
+          <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Entity</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Details</th>
+          <th class="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+          <th class="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for action in actions %}
+        {% include "partials/_history_row.html" %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<div class="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+  <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+  <p class="text-slate-500 font-medium">No action history</p>
+  <p class="text-slate-400 text-sm mt-1">Actions will appear here as you create, edit, and delete items.</p>
+</div>
+{% endif %}
+{% endblock %}

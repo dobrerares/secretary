@@ -1,0 +1,78 @@
+{# Partial: single task row #}
+<div id="task-{{ task.id }}"
+     class="group bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-sm hover:shadow transition flex items-start gap-4
+            {% if task.status == 'done' %}opacity-60{% endif %}">
+
+  {# Complete button #}
+  {% if task.status != 'done' %}
+  <button hx-post="/web/tasks/{{ task.id }}/complete"
+          hx-target="#task-{{ task.id }}"
+          hx-swap="outerHTML"
+          class="mt-0.5 w-5 h-5 rounded-full border-2 border-slate-300 hover:border-accent hover:bg-accent/10 transition shrink-0 flex items-center justify-center"
+          title="Mark complete">
+  </button>
+  {% else %}
+  <div class="mt-0.5 w-5 h-5 rounded-full bg-emerald-500 shrink-0 flex items-center justify-center">
+    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+  </div>
+  {% endif %}
+
+  {# Content #}
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="priority-dot priority-{{ task.priority }}" title="{{ task.priority }}"></span>
+      <span class="font-medium text-slate-800 {% if task.status == 'done' %}line-through text-slate-500{% endif %} truncate">
+        {{ task.title }}
+      </span>
+
+      {% if task.area %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium">{{ task.area }}</span>
+      {% endif %}
+
+      {% for tag in task.tags %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">{{ tag.name if tag.name is defined else tag }}</span>
+      {% endfor %}
+    </div>
+
+    <div class="flex items-center gap-4 mt-1.5 text-xs text-slate-400">
+      {% if task.due_at %}
+      <span class="inline-flex items-center gap-1 {% if task.status != 'done' and is_overdue is defined and is_overdue(task) %}text-red-500 font-medium{% endif %}">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+        Due {{ task.due_at.strftime('%b %d, %H:%M') }}
+      </span>
+      {% endif %}
+
+      {% if task.time_estimate_minutes %}
+      <span class="inline-flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        {{ task.time_estimate_minutes }}m
+      </span>
+      {% endif %}
+
+      {% if task.subtasks %}
+      <span class="inline-flex items-center gap-1">
+        {{ task.subtasks | selectattr('is_complete') | list | length }}/{{ task.subtasks | length }} subtasks
+      </span>
+      {% endif %}
+
+      <span class="capitalize">{{ task.status | replace('_', ' ') }}</span>
+    </div>
+  </div>
+
+  {# Actions #}
+  <div class="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+    <a href="/web/tasks/{{ task.id }}/edit"
+       class="p-1.5 rounded-md text-slate-400 hover:text-accent hover:bg-accent/10 transition"
+       title="Edit">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125"/></svg>
+    </a>
+    <button hx-post="/web/tasks/{{ task.id }}/delete"
+            hx-target="#task-{{ task.id }}"
+            hx-swap="outerHTML"
+            hx-confirm="Delete this task?"
+            class="p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition"
+            title="Delete">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+    </button>
+  </div>
+</div>

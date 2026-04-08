@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% set active_page = "events" %}
+
+{% block title %}Calendar - Secretary{% endblock %}
+{% block page_title %}{{ month_name }} {{ year }}{% endblock %}
+
+{% block header_actions %}
+<a href="/web/events/new"
+   class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-dark transition shadow-sm">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+  New Event
+</a>
+{% endblock %}
+
+{% block content %}
+{# ── Month Navigation ── #}
+<div class="flex items-center justify-between mb-6">
+  <div class="flex items-center gap-2">
+    <a href="/web/events/calendar?year={{ prev_year }}&month={{ prev_month }}"
+       class="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 transition text-slate-600">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+    </a>
+    <a href="/web/events/calendar"
+       class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition text-sm font-medium text-slate-600">
+      Today
+    </a>
+    <a href="/web/events/calendar?year={{ next_year }}&month={{ next_month }}"
+       class="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 transition text-slate-600">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+    </a>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="/web/events/agenda" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition text-sm font-medium text-slate-600">
+      Agenda view
+    </a>
+  </div>
+</div>
+
+{# ── Calendar Grid ── #}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+
+  {# Day-of-week headers #}
+  <div class="grid grid-cols-7 border-b border-slate-200">
+    {% for day_name in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+    <div class="py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider
+                {% if day_name in ['Sat', 'Sun'] %}bg-slate-50{% endif %}">
+      {{ day_name }}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Weeks #}
+  {% for week in weeks %}
+  <div class="grid grid-cols-7 {% if not loop.last %}border-b border-slate-100{% endif %}">
+    {% for day in week %}
+    {% set is_today = day == today %}
+    {% set is_current_month = day.month == month %}
+    {% set day_events = events_by_date.get(day, []) %}
+    {% set day_tasks = tasks_by_date.get(day, []) %}
+
+    <a href="/web/events/agenda?date={{ day.isoformat() }}"
+       class="cal-day relative min-h-[5.5rem] p-1.5 border-r border-slate-100 last:border-r-0 transition
+              {% if not is_current_month %}bg-slate-50/50{% endif %}
+              {% if day.weekday() >= 5 and is_current_month %}bg-slate-50/30{% endif %}">
+
+      {# Day number #}
+      <div class="flex items-center justify-center w-7 h-7 text-sm
+                  {% if is_today %}bg-accent text-white rounded-full font-bold
+                  {% elif is_current_month %}text-slate-700 font-medium
+                  {% else %}text-slate-400{% endif %}">
+        {{ day.day }}
+      </div>
+
+      {# Event pills #}
+      <div class="mt-1 space-y-0.5 overflow-hidden" style="max-height: 3.5rem;">
+        {% for ev in day_events[:3] %}
+        <span class="cal-pill bg-indigo-100 text-indigo-800">{{ ev.title }}</span>
+        {% endfor %}
+        {% for t in day_tasks[:2] %}
+        <span class="cal-pill bg-amber-100 text-amber-800">{{ t.title }}</span>
+        {% endfor %}
+        {% set total = day_events | length + day_tasks | length %}
+        {% if total > 5 %}
+        <span class="cal-pill text-slate-500 bg-slate-100">+{{ total - 5 }} more</span>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

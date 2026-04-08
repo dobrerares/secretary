@@ -1,0 +1,49 @@
+{# Partial: single history table row #}
+<tr id="action-{{ action.id }}" class="{% if action.is_undone %}bg-slate-50 opacity-60{% else %}hover:bg-slate-50/50{% endif %} transition">
+  <td class="px-5 py-3 text-sm text-slate-500 whitespace-nowrap">
+    {{ action.created_at.strftime('%b %d, %H:%M') }}
+  </td>
+  <td class="px-5 py-3">
+    {% if action.action_type == 'create' %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium">Create</span>
+    {% elif action.action_type == 'update' %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">Update</span>
+    {% elif action.action_type == 'delete' %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-red-50 text-red-700 text-xs font-medium">Delete</span>
+    {% else %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs font-medium capitalize">{{ action.action_type }}</span>
+    {% endif %}
+  </td>
+  <td class="px-5 py-3">
+    <span class="text-sm text-slate-600 capitalize">{{ action.entity_type | replace('_', ' ') }}</span>
+    <span class="text-xs text-slate-400 ml-1">#{{ action.entity_id }}</span>
+  </td>
+  <td class="px-5 py-3 text-sm text-slate-500 max-w-xs truncate">
+    {% if action.after_state and action.after_state.get('title') %}
+      {{ action.after_state['title'] }}
+    {% elif action.before_state and action.before_state.get('title') %}
+      {{ action.before_state['title'] }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+  <td class="px-5 py-3">
+    {% if action.is_undone %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-medium">Undone</span>
+    {% else %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-xs font-medium">Active</span>
+    {% endif %}
+  </td>
+  <td class="px-5 py-3 text-right">
+    {% if not action.is_undone %}
+    <button hx-post="/web/history/{{ action.id }}/undo"
+            hx-target="#action-{{ action.id }}"
+            hx-swap="outerHTML"
+            hx-confirm="Undo this action?"
+            class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded-md hover:bg-amber-100 hover:text-amber-700 transition">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 0 1 0 12h-3"/></svg>
+      Undo
+    </button>
+    {% endif %}
+  </td>
+</tr>

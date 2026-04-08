@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% set active_page = "tasks" %}
+
+{% block title %}Tasks - Secretary{% endblock %}
+{% block page_title %}Tasks{% endblock %}
+
+{% block header_actions %}
+<a href="/web/tasks/new"
+   class="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-dark transition shadow-sm">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+  New Task
+</a>
+{% endblock %}
+
+{% block content %}
+{# ── Filter Bar ── #}
+<div class="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">
+  <form hx-get="/web/tasks/_list" hx-target="#task-list" hx-swap="innerHTML" hx-trigger="change"
+        class="flex flex-wrap items-center gap-3">
+
+    {# Area filter #}
+    <div>
+      <select name="area"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+        <option value="">All areas</option>
+        {% for a in areas %}
+        <option value="{{ a }}" {% if current_area == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Priority filter #}
+    <div>
+      <select name="priority"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+        <option value="">All priorities</option>
+        <option value="urgent" {% if current_priority == "urgent" %}selected{% endif %}>Urgent</option>
+        <option value="high" {% if current_priority == "high" %}selected{% endif %}>High</option>
+        <option value="medium" {% if current_priority == "medium" %}selected{% endif %}>Medium</option>
+        <option value="low" {% if current_priority == "low" %}selected{% endif %}>Low</option>
+        <option value="none" {% if current_priority == "none" %}selected{% endif %}>None</option>
+      </select>
+    </div>
+
+    {# Status filter #}
+    <div>
+      <select name="status"
+              class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+        <option value="" {% if current_status == "" %}selected{% endif %}>Active</option>
+        <option value="done" {% if current_status == "done" %}selected{% endif %}>Done</option>
+        <option value="to_do" {% if current_status == "to_do" %}selected{% endif %}>To Do</option>
+        <option value="in_progress" {% if current_status == "in_progress" %}selected{% endif %}>In Progress</option>
+        <option value="cancelled" {% if current_status == "cancelled" %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+{# ── Task List ── #}
+<div id="task-list">
+  {% include "tasks/_task_list.html" %}
+</div>
+{% endblock %}

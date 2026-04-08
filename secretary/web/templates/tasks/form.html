@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% set active_page = "tasks" %}
+
+{% block title %}{{ "Edit Task" if editing else "New Task" }} - Secretary{% endblock %}
+{% block page_title %}{{ "Edit Task" if editing else "New Task" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <form method="POST"
+        action="{{ '/web/tasks/' ~ task.id if editing else '/web/tasks' }}"
+        class="space-y-6">
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+
+      {# ── Title ── #}
+      <div class="p-5">
+        <label for="title" class="block text-sm font-medium text-slate-700 mb-1.5">Title <span class="text-red-400">*</span></label>
+        <input type="text" id="title" name="title" required
+               value="{{ task.title if task else '' }}"
+               placeholder="What needs to be done?"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+      </div>
+
+      {# ── Description ── #}
+      <div class="p-5">
+        <label for="description" class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+        <textarea id="description" name="description" rows="3"
+                  placeholder="Add details..."
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">{{ task.description or '' if task else '' }}</textarea>
+      </div>
+
+      {# ── Area & Priority ── #}
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="area" class="block text-sm font-medium text-slate-700 mb-1.5">Area</label>
+          <select id="area" name="area"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+            <option value="">None</option>
+            {% for a in areas %}
+            <option value="{{ a }}" {% if task and task.area == a %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="priority" class="block text-sm font-medium text-slate-700 mb-1.5">Priority</label>
+          <select id="priority" name="priority"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+            {% set priorities = ['none', 'low', 'medium', 'high', 'urgent'] %}
+            {% for p in priorities %}
+            <option value="{{ p }}" {% if task and task.priority == p %}selected{% endif %}>{{ p | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {# ── Status (edit only) ── #}
+      {% if editing %}
+      <div class="p-5">
+        <label for="status" class="block text-sm font-medium text-slate-700 mb-1.5">Status</label>
+        <select id="status" name="status"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+          {% set statuses = ['inbox', 'to_do', 'in_progress', 'done', 'cancelled'] %}
+          {% for s in statuses %}
+          <option value="{{ s }}" {% if task and task.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      {# ── Dates ── #}
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="due_at" class="block text-sm font-medium text-slate-700 mb-1.5">Due date</label>
+          <input type="datetime-local" id="due_at" name="due_at"
+                 value="{{ task.due_at.strftime('%Y-%m-%dT%H:%M') if task and task.due_at else '' }}"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+        <div>
+          <label for="scheduled_at" class="block text-sm font-medium text-slate-700 mb-1.5">Scheduled for</label>
+          <input type="datetime-local" id="scheduled_at" name="scheduled_at"
+                 value="{{ task.scheduled_at.strftime('%Y-%m-%dT%H:%M') if task and task.scheduled_at else '' }}"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+      </div>
+
+      {# ── Time estimate & Tags ── #}
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="time_estimate_minutes" class="block text-sm font-medium text-slate-700 mb-1.5">Time estimate (minutes)</label>
+          <input type="number" id="time_estimate_minutes" name="time_estimate_minutes" min="0"
+                 value="{{ task.time_estimate_minutes or '' if task else '' }}"
+                 placeholder="e.g. 30"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+        <div>
+          <label for="tags" class="block text-sm font-medium text-slate-700 mb-1.5">Tags</label>
+          <input type="text" id="tags" name="tags"
+                 value="{% if task and task.tags %}{{ task.tags | map(attribute='name') | join(', ') }}{% endif %}"
+                 placeholder="comma-separated"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+      </div>
+
+      {# ── Subtasks ── #}
+      <div class="p-5" x-data="subtaskManager()">
+        <label class="block text-sm font-medium text-slate-700 mb-3">Subtasks</label>
+
+        <div class="space-y-2">
+          <template x-for="(st, i) in subtasks" :key="i">
+            <div class="flex items-center gap-2">
+              <input type="text" :name="'subtask_' + i" x-model="st.title"
+                     placeholder="Subtask title"
+                     class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+              <button type="button" @click="removeSubtask(i)"
+                      class="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-red-50 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </template>
+        </div>
+
+        <button type="button" @click="addSubtask()"
+                class="mt-3 inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent-dark font-medium transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+          Add subtask
+        </button>
+      </div>
+    </div>
+
+    {# ── Actions ── #}
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="px-6 py-2.5 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-dark transition shadow-sm">
+        {{ "Save Changes" if editing else "Create Task" }}
+      </button>
+      <a href="/web/tasks" class="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-800 transition">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function subtaskManager() {
+  // Pre-populate from existing task subtasks
+  const existing = [
+    {% if task and task.subtasks %}
+      {% for st in task.subtasks %}
+      { title: {{ st.title | tojson }} },
+      {% endfor %}
+    {% endif %}
+  ];
+  return {
+    subtasks: existing.length ? existing : [],
+    addSubtask() {
+      this.subtasks.push({ title: '' });
+    },
+    removeSubtask(i) {
+      this.subtasks.splice(i, 1);
+    },
+  };
+}
+</script>
+{% endblock %}

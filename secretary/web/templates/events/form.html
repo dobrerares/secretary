@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% set active_page = "events" %}
+
+{% block title %}{{ "Edit Event" if editing else "New Event" }} - Secretary{% endblock %}
+{% block page_title %}{{ "Edit Event" if editing else "New Event" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <form method="POST"
+        action="{{ '/web/events/' ~ event.id if editing else '/web/events' }}"
+        class="space-y-6"
+        x-data="{ allDay: {{ 'true' if event and event.is_all_day else 'false' }} }">
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+
+      {# ── Title ── #}
+      <div class="p-5">
+        <label for="title" class="block text-sm font-medium text-slate-700 mb-1.5">Title <span class="text-red-400">*</span></label>
+        <input type="text" id="title" name="title" required
+               value="{{ event.title if event else '' }}"
+               placeholder="Event name"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+      </div>
+
+      {# ── Description ── #}
+      <div class="p-5">
+        <label for="description" class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+        <textarea id="description" name="description" rows="3"
+                  placeholder="Add details..."
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">{{ event.description or '' if event else '' }}</textarea>
+      </div>
+
+      {# ── All Day Toggle ── #}
+      <div class="p-5">
+        <label class="inline-flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" name="is_all_day" x-model="allDay"
+                 class="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent/40" />
+          <span class="text-sm font-medium text-slate-700">All-day event</span>
+        </label>
+      </div>
+
+      {# ── Dates ── #}
+      <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="start_at" class="block text-sm font-medium text-slate-700 mb-1.5">Start <span class="text-red-400">*</span></label>
+          <input type="datetime-local" id="start_at" name="start_at" required
+                 value="{{ event.start_at.strftime('%Y-%m-%dT%H:%M') if event and event.start_at else '' }}"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+        <div>
+          <label for="end_at" class="block text-sm font-medium text-slate-700 mb-1.5">End <span class="text-red-400">*</span></label>
+          <input type="datetime-local" id="end_at" name="end_at" required
+                 value="{{ event.end_at.strftime('%Y-%m-%dT%H:%M') if event and event.end_at else '' }}"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+        </div>
+      </div>
+
+      {# ── Location ── #}
+      <div class="p-5">
+        <label for="location" class="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
+        <input type="text" id="location" name="location"
+               value="{{ event.location or '' if event else '' }}"
+               placeholder="Where is this happening?"
+               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+      </div>
+
+      {# ── Area ── #}
+      <div class="p-5">
+        <label for="area" class="block text-sm font-medium text-slate-700 mb-1.5">Area</label>
+        <select id="area" name="area"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
+          <option value="">None</option>
+          {% for a in areas %}
+          <option value="{{ a }}" {% if event and event.area == a %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    {# ── Actions ── #}
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="px-6 py-2.5 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-dark transition shadow-sm">
+        {{ "Save Changes" if editing else "Create Event" }}
+      </button>
+      <a href="/web/events/calendar" class="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-800 transition">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
