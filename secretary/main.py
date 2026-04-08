@@ -17,20 +17,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Secretary starting up...")
 
-    # Run Alembic migrations (handles both fresh and existing DBs)
+    # Ensure DB schema is up to date
+    from secretary.db.base import Base
     from secretary.db.session import engine
 
-    try:
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Database migrations applied.")
-    except Exception:
-        logger.warning("Alembic migration failed, falling back to create_all", exc_info=True)
-        from secretary.db.base import Base
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     # Seed settings row if missing
     from secretary.db.session import async_session_factory
