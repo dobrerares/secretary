@@ -46,16 +46,19 @@
     <div class="px-5 py-4 border-b border-slate-100">
       <h2 class="font-semibold text-slate-800">Timezone</h2>
     </div>
-    <div class="p-5" x-data="{ search: '', timezones: {{ timezones | tojson }} }">
-      <input type="text" x-model="search" placeholder="Search timezones..."
+    <div class="p-5" x-data="{ search: '', selected: '{{ settings.timezone }}', timezones: {{ timezones | tojson }} }">
+      <input type="hidden" name="timezone" :value="selected" />
+      <input type="text" x-model="search" placeholder="Type to search (e.g. Bucharest, Tokyo, New_York)..."
              class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
-      <select name="timezone" size="8"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent text-sm">
-        <template x-for="tz in timezones.filter(t => t.toLowerCase().includes(search.toLowerCase()))" :key="tz">
-          <option :value="tz" x-text="tz" :selected="tz === '{{ settings.timezone }}'"></option>
+      <div class="border border-slate-300 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+        <template x-for="tz in timezones.filter(t => t.toLowerCase().includes(search.toLowerCase())).slice(0, 50)" :key="tz">
+          <button type="button" @click="selected = tz; search = tz"
+                  :class="selected === tz ? 'bg-accent/10 text-accent font-medium' : 'text-slate-700 hover:bg-slate-50'"
+                  class="w-full text-left px-3 py-1.5 text-sm transition" x-text="tz">
+          </button>
         </template>
-      </select>
-      <p class="text-xs text-slate-400 mt-1.5">Current: <b>{{ settings.timezone }}</b></p>
+      </div>
+      <p class="text-xs text-slate-400 mt-1.5">Selected: <b x-text="selected"></b></p>
     </div>
   </div>
 
