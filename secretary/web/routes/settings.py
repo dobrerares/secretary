@@ -42,10 +42,13 @@ def _server_config() -> dict:
 
 @router.get("", response_class=HTMLResponse)
 async def settings_page(request: Request, session: AsyncSession = Depends(get_session)):
+    from zoneinfo import available_timezones
     user_settings = await get_settings(session)
+    tzs = sorted(tz for tz in available_timezones() if "/" in tz and not tz.startswith("Etc/"))
     return templates.TemplateResponse(request, "settings.html", {
         "settings": user_settings,
         "server": _server_config(),
+        "timezones": tzs,
     })
 
 

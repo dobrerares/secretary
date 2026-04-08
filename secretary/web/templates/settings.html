@@ -46,22 +46,16 @@
     <div class="px-5 py-4 border-b border-slate-100">
       <h2 class="font-semibold text-slate-800">Timezone</h2>
     </div>
-    <div class="p-5">
-      <select name="timezone"
-              class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent">
-        {% set timezones = [
-          'UTC', 'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
-          'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Moscow',
-          'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
-          'Australia/Sydney', 'Australia/Melbourne',
-          'Pacific/Auckland', 'America/Sao_Paulo', 'America/Toronto',
-          'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-          'America/New_York', 'Africa/Cairo', 'Africa/Lagos',
-        ] %}
-        {% for tz in timezones | sort %}
-        <option value="{{ tz }}" {% if settings.timezone == tz %}selected{% endif %}>{{ tz }}</option>
-        {% endfor %}
+    <div class="p-5" x-data="{ search: '', timezones: {{ timezones | tojson }} }">
+      <input type="text" x-model="search" placeholder="Search timezones..."
+             class="w-full border border-slate-300 rounded-lg px-3 py-2 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent" />
+      <select name="timezone" size="8"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent text-sm">
+        <template x-for="tz in timezones.filter(t => t.toLowerCase().includes(search.toLowerCase()))" :key="tz">
+          <option :value="tz" x-text="tz" :selected="tz === '{{ settings.timezone }}'"></option>
+        </template>
       </select>
+      <p class="text-xs text-slate-400 mt-1.5">Current: <b>{{ settings.timezone }}</b></p>
     </div>
   </div>
 
