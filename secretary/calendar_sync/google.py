@@ -28,17 +28,7 @@ CLIENT_SECRET_FILE = CREDENTIALS_DIR / "google_client_secret.json"
 
 
 class GoogleCalendarSync:
-    """Handles Google Calendar OAuth2 and event fetching.
-
-    Workflow:
-        1. Place your Google OAuth client-secret JSON at data/google_client_secret.json.
-        2. Call ``get_auth_url(redirect_uri)`` and redirect the user to that URL.
-        3. Google redirects back; call ``handle_callback(code, redirect_uri)`` with
-           the authorization code to exchange it for credentials.
-        4. Credentials (including a refresh token) are persisted to
-           data/google_credentials.json for future use.
-        5. Call ``fetch_events(time_min, time_max)`` to pull events.
-    """
+    """Handles Google Calendar OAuth2 and event fetching."""
 
     def __init__(self) -> None:
         CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
@@ -47,12 +37,28 @@ class GoogleCalendarSync:
     # OAuth helpers
     # ------------------------------------------------------------------
 
-    def get_auth_url(self, redirect_uri: str) -> str:
-        """Return a Google OAuth2 consent URL for the user to visit.
+    @staticmethod
+    def _ensure_client_secret_file() -> None:
+        """Create client secret JSON from env vars if it doesn't exist."""
+        if CLIENT_SECRET_FILE.exists():
+            return
+        from secretary.config.settings import settings
+        if not settings.google_client_id or not settings.google_client_secret:
+            raise ValueError("Google Calendar client ID and secret not configured")
+        payload = {
+            "web": {
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [],
+            }
+        }
+        CLIENT_SECRET_FILE.write_text(json.dumps(payload))
 
-        ``redirect_uri`` must match one of the URIs registered in the
-        Google Cloud console for the OAuth client.
-        """
+    def get_auth_url(self, redirect_uri: str) -> str:
+        """Return a Google OAuth2 consent URL for the user to visit."""
+        self._ensure_client_secret_file()
         flow = Flow.from_client_secrets_file(
             str(CLIENT_SECRET_FILE),
             scopes=SCOPES,
@@ -66,6 +72,7 @@ class GoogleCalendarSync:
 
     def handle_callback(self, code: str, redirect_uri: str) -> Credentials:
         """Exchange the authorization *code* for credentials and persist them."""
+        self._ensure_client_secret_file()
         flow = Flow.from_client_secrets_file(
             str(CLIENT_SECRET_FILE),
             scopes=SCOPES,
@@ -75,6 +82,10 @@ class GoogleCalendarSync:
         creds = flow.credentials
         self._save_credentials(creds)
         return creds
+
+    def is_connected(self) -> bool:
+        """Check if we have stored credentials."""
+        return CREDENTIALS_FILE.exists()
 
     # ------------------------------------------------------------------
     # Credential storage

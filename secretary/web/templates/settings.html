@@ -275,11 +275,45 @@
         <h2 class="font-semibold text-slate-800">Calendar Sync</h2>
       </div>
       <div class="p-5 space-y-4">
+        {# Google Calendar OAuth status + connect/disconnect button #}
+        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 3h-1.125V1.5h-1.5V3h-9.75V1.5h-1.5V3H4.5A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zm0 16.5h-15V8.25h15v11.25z"/></svg>
+            <div>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Google Calendar</span>
+              {% if server.google_connected %}
+              <p class="text-xs text-emerald-600">Connected</p>
+              {% else %}
+              <p class="text-xs text-slate-400">Not connected</p>
+              {% endif %}
+            </div>
+          </div>
+          {% if server.google_connected %}
+          <a href="/web/settings/google/disconnect"
+             class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
+            Disconnect
+          </a>
+          {% elif server.google_client_id %}
+          <a href="/web/settings/google/connect"
+             class="px-3 py-1.5 text-xs font-medium text-white bg-accent rounded-lg hover:bg-accent-dark transition">
+            Connect
+          </a>
+          {% else %}
+          <span class="text-xs text-slate-400">Set Client ID below first</span>
+          {% endif %}
+        </div>
+
+        {% if request.query_params.get('google') == 'connected' %}
+        <div class="p-2 bg-emerald-50 text-emerald-700 text-xs rounded-lg">Google Calendar connected successfully!</div>
+        {% elif request.query_params.get('google_error') %}
+        <div class="p-2 bg-red-50 text-red-700 text-xs rounded-lg">Error: {{ request.query_params.get('google_error') }}</div>
+        {% endif %}
+
         <div class="flex items-center gap-3">
           <input type="checkbox" name="google_calendar_enabled" value="true" id="gcal_toggle"
                  {% if server.google_calendar_enabled %}checked{% endif %}
                  class="w-4 h-4 border-slate-300 rounded text-accent focus:ring-accent/40" />
-          <label for="gcal_toggle" class="text-sm font-medium text-slate-700">Enable Google Calendar</label>
+          <label for="gcal_toggle" class="text-sm font-medium text-slate-700">Enable sync</label>
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1.5">CalDAV Server URL</label>

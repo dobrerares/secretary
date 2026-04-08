@@ -25,11 +25,14 @@ def _mask(value: str, visible: int = 4) -> str:
 
 
 def _server_config() -> dict:
+    from secretary.calendar_sync.google import CREDENTIALS_FILE
     return {
         "llm_model": app_settings.llm_model,
         "llm_api_key_masked": _mask(app_settings.llm_api_key),
         "whisper_mode": app_settings.whisper_mode,
         "google_calendar_enabled": app_settings.google_calendar_enabled,
+        "google_client_id": app_settings.google_client_id,
+        "google_connected": CREDENTIALS_FILE.exists(),
         "caldav_url": app_settings.caldav_url,
         "caldav_username": app_settings.caldav_username,
         "caldav_password_masked": _mask(app_settings.caldav_password),
@@ -151,3 +154,42 @@ async def server_config_update(request: Request):
     reload_settings()
 
     return RedirectResponse(url="/web/settings?saved=1", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# Google Calendar OAuth flow
+# ---------------------------------------------------------------------------
+
+GOOGLE_CALLBACK_PATH = "/web/settings/google/callback"
+
+
+@router.get("/google/connect")
+async def google_connect(request: Request):
+    """Redirect user to Google OAuth consent screen."""
+    from secretary.calendar_sync.google import GoogleCalendarSync
+    gcal = GoogleCalendarSync()
+    redirect_uri = str(request.base_url).rstrip("/") + GOOGLE_CALLBACK_PATH
+    auth_url = gcal.get_auth_url(redirect_uri)
+    return RedirectResponse(url=auth_url)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, code: str = "", error: str = ""):
+    """Handle Google OAuth callback."""
+    if error or not code:
+        return RedirectResponse(url="/web/settings?google_error=" + (error or "no_code"))
+
+    from secretary.calendar_sync.google import GoogleCalendarSync
+    gcal = GoogleCalendarSync()
+    redirect_uri = str(request.base_url).rstrip("/") + GOOGLE_CALLBACK_PATH
+    gcal.handle_callback(code, redirect_uri)
+    return RedirectResponse(url="/web/settings?google=connected")
+
+
+@router.get("/google/disconnect")
+async def google_disconnect():
+    """Remove stored Google credentials."""
+    from secretary.calendar_sync.google import CREDENTIALS_FILE
+    if CREDENTIALS_FILE.exists():
+        CREDENTIALS_FILE.unlink()
+    return RedirectResponse(url="/web/settings?google=disconnected")
