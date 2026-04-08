@@ -57,10 +57,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Secretary", version="0.1.0", lifespan=lifespan)
 
 # Web UI
-from secretary.web.app import router as web_router, TokenAuthMiddleware  # noqa: E402
+from secretary.web.app import router as web_router, TokenAuthMiddleware, mount_static  # noqa: E402
 
 app.add_middleware(TokenAuthMiddleware)
 app.include_router(web_router, prefix="/web")
+mount_static(app)
 
 
 # Webhook route for Telegram (only active in webhook mode)

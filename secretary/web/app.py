@@ -122,4 +122,6 @@ async def web_root():
 # Mount static files
 # ---------------------------------------------------------------------------
 
-router.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="web_static")
+def mount_static(app):
+    """Mount static files on the main app (sub-router mounts don't resolve correctly with prefixes)."""
+    app.mount("/web/static", StaticFiles(directory=str(STATIC_DIR)), name="web_static")
