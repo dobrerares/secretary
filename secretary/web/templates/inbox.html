@@ -42,45 +42,68 @@
           </span>
         </div>
 
-        {# Proposed actions #}
-        {% if item.proposed_actions %}
-        <div class="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <p class="text-xs font-medium text-slate-600 mb-1.5">Proposed actions:</p>
-          {% if item.proposed_actions is mapping %}
-            <pre class="text-xs text-slate-500 whitespace-pre-wrap">{{ item.proposed_actions | tojson(indent=2) }}</pre>
-          {% elif item.proposed_actions is iterable %}
-            <ul class="text-xs text-slate-500 space-y-1">
-              {% for action in item.proposed_actions %}
-              <li class="flex items-start gap-1.5">
-                <span class="text-slate-400 mt-0.5">-</span>
-                {% if action is mapping %}
-                  <span>{{ action.get('type', 'action') | capitalize }}: {{ action.get('title', action | tojson) }}</span>
-                {% else %}
-                  <span>{{ action }}</span>
+        {# Proposed actions — render one suggestion card per Proposed action,
+           each with its own approve/reject keyed by action_id. #}
+        {% if item.proposed_actions and item.proposed_actions is iterable and item.proposed_actions is not mapping %}
+        <div class="mt-3 space-y-2">
+          {% for action in item.proposed_actions %}
+          {% if action is mapping and action.get('action_id') %}
+          <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-700">
+                {{ action.get('tool', 'unknown') }}
+                {% if action.get('status') and action.status != 'pending' %}
+                <span class="ml-2 text-xs px-1.5 py-0.5 rounded
+                       {% if action.status == 'approved' %}bg-emerald-50 text-emerald-700
+                       {% elif action.status == 'rejected' %}bg-red-50 text-red-700
+                       {% endif %}">{{ action.status }}</span>
                 {% endif %}
-              </li>
-              {% endfor %}
-            </ul>
+              </p>
+              {% if action.get('args') %}
+              <pre class="text-xs text-slate-500 mt-1 whitespace-pre-wrap">{{ action.args | tojson(indent=2) }}</pre>
+              {% endif %}
+              {% if action.get('reason') %}
+              <p class="text-xs text-slate-500 italic mt-1">{{ action.reason }}</p>
+              {% endif %}
+            </div>
+            {% if action.get('status') == 'pending' %}
+            <div class="shrink-0 flex gap-1.5">
+              <button hx-post="/web/inbox/{{ item.id }}/actions/{{ action.action_id }}/approve"
+                      hx-target="#inbox-{{ item.id }}"
+                      hx-swap="outerHTML"
+                      class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-medium rounded hover:bg-emerald-100 transition border border-emerald-200">
+                Approve
+              </button>
+              <button hx-post="/web/inbox/{{ item.id }}/actions/{{ action.action_id }}/reject"
+                      hx-target="#inbox-{{ item.id }}"
+                      hx-swap="outerHTML"
+                      class="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-medium rounded hover:bg-red-100 transition border border-red-200">
+                Reject
+              </button>
+            </div>
+            {% endif %}
+          </div>
           {% endif %}
+          {% endfor %}
         </div>
         {% endif %}
       </div>
 
-      {# Actions #}
+      {# Whole-item actions (approve all / reject all) #}
       <div class="shrink-0 flex items-center gap-2">
         <button hx-post="/web/inbox/{{ item.id }}/approve"
                 hx-target="#inbox-{{ item.id }}"
                 hx-swap="outerHTML"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-lg hover:bg-emerald-100 transition border border-emerald-200">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-          Approve
+          Approve all
         </button>
         <button hx-post="/web/inbox/{{ item.id }}/reject"
                 hx-target="#inbox-{{ item.id }}"
                 hx-swap="outerHTML"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition border border-red-200">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          Reject
+          Reject all
         </button>
       </div>
     </div>
