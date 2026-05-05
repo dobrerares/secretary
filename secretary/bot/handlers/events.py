@@ -23,6 +23,7 @@ router = Router()
 # Datetime parsing helper
 # ---------------------------------------------------------------------------
 
+
 def _parse_datetime(text: str) -> datetime | None:
     """Parse datetime strings. Accepts natural language and ISO-like formats."""
     text = text.strip()
@@ -75,9 +76,20 @@ def _parse_datetime(text: str) -> datetime | None:
                 return today + timedelta(days=1)
 
             day_names = {
-                "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-                "friday": 4, "saturday": 5, "sunday": 6,
-                "mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6,
+                "monday": 0,
+                "tuesday": 1,
+                "wednesday": 2,
+                "thursday": 3,
+                "friday": 4,
+                "saturday": 5,
+                "sunday": 6,
+                "mon": 0,
+                "tue": 1,
+                "wed": 2,
+                "thu": 3,
+                "fri": 4,
+                "sat": 5,
+                "sun": 6,
             }
             if date_part in day_names:
                 target = day_names[date_part]
@@ -93,6 +105,7 @@ def _parse_datetime(text: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 # /addevent  -- FSM flow
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("addevent"))
 async def cmd_addevent(message: Message, state: FSMContext) -> None:
@@ -121,8 +134,7 @@ async def addevent_title(message: Message, state: FSMContext) -> None:
         return
     await state.update_data(title=title)
     await message.answer(
-        "When does it start?\n"
-        "Examples: <code>tomorrow 14:00</code>, <code>2026-04-10 09:00</code>",
+        "When does it start?\nExamples: <code>tomorrow 14:00</code>, <code>2026-04-10 09:00</code>",
         parse_mode="HTML",
     )
     await state.set_state(AddEventStates.waiting_for_start)
@@ -181,16 +193,13 @@ async def addevent_end(message: Message, state: FSMContext) -> None:
         end_at = _parse_datetime(message.text)
         if end_at is None:
             await message.answer(
-                "Could not parse end time. Try:\n"
-                "<code>15:00</code>, <code>+1h</code>, <code>+90m</code>",
+                "Could not parse end time. Try:\n<code>15:00</code>, <code>+1h</code>, <code>+90m</code>",
                 parse_mode="HTML",
             )
             return
         # If only time was given and it's before start, it's probably same-day
         if end_at < start_at:
-            end_at = end_at.replace(
-                year=start_at.year, month=start_at.month, day=start_at.day
-            )
+            end_at = end_at.replace(year=start_at.year, month=start_at.month, day=start_at.day)
 
     await state.update_data(end_at=end_at.isoformat())
 
@@ -240,6 +249,7 @@ async def addevent_confirm_no(callback: CallbackQuery, state: FSMContext) -> Non
 # ---------------------------------------------------------------------------
 # /agenda  -- day/week view
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("agenda"))
 async def cmd_agenda(message: Message, session: AsyncSession) -> None:

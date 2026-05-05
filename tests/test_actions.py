@@ -7,7 +7,7 @@ that ride inside their root's Snapshot; they are not Root entities.
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
@@ -103,7 +103,6 @@ async def test_task_snapshot_round_trip(session):
     snap = make_snapshot("task", original)
 
     # Delete the original, then recreate via the registry's recreate fn.
-    from secretary.db.models import Task
 
     await session.delete(original)
     await session.commit()

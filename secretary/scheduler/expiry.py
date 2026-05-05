@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import update
 
 from secretary.db.models import ActionLog
 from secretary.db.session import async_session_factory

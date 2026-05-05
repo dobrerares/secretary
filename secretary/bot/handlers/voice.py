@@ -30,16 +30,24 @@ router = Router()
 
 def _suggestion_keyboard(inbox_item_id: int, action_id: str) -> InlineKeyboardMarkup:
     """Build [Approve] [Reject] buttons keyed by Proposed action UUID."""
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Approve", callback_data=f"apr:{inbox_item_id}:{action_id}"),
-        InlineKeyboardButton(text="Reject", callback_data=f"rej:{inbox_item_id}:{action_id}"),
-    ]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Approve", callback_data=f"apr:{inbox_item_id}:{action_id}"),
+                InlineKeyboardButton(text="Reject", callback_data=f"rej:{inbox_item_id}:{action_id}"),
+            ]
+        ]
+    )
 
 
 def _undo_keyboard(batch_id: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Undo", callback_data=f"undo:{batch_id}"),
-    ]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Undo", callback_data=f"undo:{batch_id}"),
+            ]
+        ]
+    )
 
 
 async def _render(message: Message, result: ProcessResult) -> None:
@@ -118,8 +126,7 @@ async def handle_voice_message(message: Message, session: AsyncSession) -> None:
     except Exception:
         logger.exception("Voice message processing failed")
         await message.answer(
-            "Sorry, I couldn't process that voice note. "
-            "Please try again or send a text message instead."
+            "Sorry, I couldn't process that voice note. Please try again or send a text message instead."
         )
     finally:
         files_to_clean = [ogg_path]

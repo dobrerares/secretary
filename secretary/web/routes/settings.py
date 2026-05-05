@@ -26,6 +26,7 @@ def _mask(value: str, visible: int = 4) -> str:
 
 def _server_config() -> dict:
     from secretary.calendar_sync.google import CREDENTIALS_FILE
+
     return {
         "llm_model": app_settings.llm_model,
         "llm_api_key_masked": _mask(app_settings.llm_api_key),
@@ -43,13 +44,18 @@ def _server_config() -> dict:
 @router.get("", response_class=HTMLResponse)
 async def settings_page(request: Request, session: AsyncSession = Depends(get_session)):
     from zoneinfo import available_timezones
+
     user_settings = await get_settings(session)
     tzs = sorted(tz for tz in available_timezones() if "/" in tz and not tz.startswith("Etc/"))
-    return templates.TemplateResponse(request, "settings.html", {
-        "settings": user_settings,
-        "server": _server_config(),
-        "timezones": tzs,
-    })
+    return templates.TemplateResponse(
+        request,
+        "settings.html",
+        {
+            "settings": user_settings,
+            "server": _server_config(),
+            "timezones": tzs,
+        },
+    )
 
 
 @router.post("", response_class=HTMLResponse)
@@ -154,6 +160,7 @@ async def server_config_update(request: Request):
 
     # Hot-reload: apply new values to the running process immediately
     from secretary.config.settings import reload_settings
+
     reload_settings()
 
     return RedirectResponse(url="/web/settings?saved=1", status_code=303)
@@ -170,6 +177,7 @@ GOOGLE_CALLBACK_PATH = "/web/settings/google/callback"
 async def google_connect(request: Request):
     """Redirect user to Google OAuth consent screen."""
     from secretary.calendar_sync.google import GoogleCalendarSync
+
     gcal = GoogleCalendarSync()
     redirect_uri = str(request.base_url).rstrip("/") + GOOGLE_CALLBACK_PATH
     auth_url = gcal.get_auth_url(redirect_uri)
@@ -183,6 +191,7 @@ async def google_callback(request: Request, code: str = "", error: str = ""):
         return RedirectResponse(url="/web/settings?google_error=" + (error or "no_code"))
 
     from secretary.calendar_sync.google import GoogleCalendarSync
+
     gcal = GoogleCalendarSync()
     redirect_uri = str(request.base_url).rstrip("/") + GOOGLE_CALLBACK_PATH
     gcal.handle_callback(code, redirect_uri)
@@ -193,6 +202,7 @@ async def google_callback(request: Request, code: str = "", error: str = ""):
 async def google_disconnect():
     """Remove stored Google credentials."""
     from secretary.calendar_sync.google import CREDENTIALS_FILE
+
     if CREDENTIALS_FILE.exists():
         CREDENTIALS_FILE.unlink()
     return RedirectResponse(url="/web/settings?google=disconnected")

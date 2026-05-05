@@ -1,6 +1,6 @@
 """System prompt rendering for the secretary AI."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from jinja2 import Template
 

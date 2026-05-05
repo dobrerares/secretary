@@ -1,7 +1,5 @@
 """System command handlers: /help, /undo, /inbox, /settings, /briefing."""
 
-import uuid
-
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
@@ -64,8 +62,7 @@ async def cmd_start(message: Message, session: AsyncSession, state: FSMContext) 
 
     if has_areas:
         await message.answer(
-            "\U0001f44b Welcome back! Use /help to see commands, "
-            "or just send me a message.",
+            "\U0001f44b Welcome back! Use /help to see commands, or just send me a message.",
             parse_mode="HTML",
         )
         return
@@ -100,6 +97,7 @@ async def onboard_receive_areas(message: Message, session: AsyncSession, state: 
 
     from secretary.core.schemas import SettingsUpdate
     from secretary.core.settings import update_settings
+
     await update_settings(session, SettingsUpdate(areas=areas))
     await session.commit()
     await state.clear()
@@ -108,7 +106,7 @@ async def onboard_receive_areas(message: Message, session: AsyncSession, state: 
     await message.answer(
         f"\u2705 Areas set: {area_list}\n\n"
         "You're all set! Here's what you can do:\n\n"
-        "\u2022 Send me a message like <i>\"Submit ISS project by Friday\"</i>\n"
+        '\u2022 Send me a message like <i>"Submit ISS project by Friday"</i>\n'
         "\u2022 Use /addtask for a step-by-step flow\n"
         "\u2022 Use /agenda to see your day\n"
         "\u2022 Use /help for all commands\n\n"
@@ -125,6 +123,7 @@ async def cmd_help(message: Message) -> None:
 # ---------------------------------------------------------------------------
 # /undo
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("undo"))
 async def cmd_undo(message: Message, session: AsyncSession) -> None:
@@ -161,6 +160,7 @@ async def cmd_undo(message: Message, session: AsyncSession) -> None:
 # /inbox
 # ---------------------------------------------------------------------------
 
+
 @router.message(Command("inbox"))
 async def cmd_inbox(message: Message, session: AsyncSession) -> None:
     items = await list_pending(session)
@@ -179,6 +179,7 @@ async def cmd_inbox(message: Message, session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 # /settings
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("settings"))
 async def cmd_settings(message: Message, session: AsyncSession) -> None:
@@ -202,6 +203,7 @@ async def cmd_settings(message: Message, session: AsyncSession) -> None:
 # /briefing
 # ---------------------------------------------------------------------------
 
+
 @router.message(Command("briefing"))
 async def cmd_briefing(message: Message, session: AsyncSession) -> None:
     from secretary.scheduler.briefings import generate_briefing_text
@@ -213,6 +215,7 @@ async def cmd_briefing(message: Message, session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 # /sync
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("sync"))
 async def cmd_sync(message: Message, session: AsyncSession) -> None:

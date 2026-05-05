@@ -10,6 +10,7 @@ Revises: 613ef3889d69
 Create Date: 2026-05-05 04:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -17,8 +18,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'be46ce80f932'
-down_revision: Union[str, Sequence[str], None] = '613ef3889d69'
+revision: str = "be46ce80f932"
+down_revision: Union[str, Sequence[str], None] = "613ef3889d69"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -62,9 +63,7 @@ def _rebuild(check_clause: str) -> None:
 
     op.create_index("ix_action_log_batch_id", "action_log", ["batch_id"])
     op.create_index("ix_action_log_entity", "action_log", ["entity_type", "entity_id"])
-    op.create_index(
-        "ix_action_log_undone_created", "action_log", ["is_undone", "created_at"]
-    )
+    op.create_index("ix_action_log_undone_created", "action_log", ["is_undone", "created_at"])
 
 
 def _in_clause(check_clause: str) -> str:

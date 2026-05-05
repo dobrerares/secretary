@@ -22,10 +22,7 @@ class CloudWhisperTranscriber:
         if self._client is None:
             api_key = settings.openai_api_key
             if not api_key:
-                raise RuntimeError(
-                    "SECRETARY_OPENAI_API_KEY is not set -- "
-                    "cannot use cloud Whisper transcription."
-                )
+                raise RuntimeError("SECRETARY_OPENAI_API_KEY is not set -- cannot use cloud Whisper transcription.")
             self._client = AsyncOpenAI(api_key=api_key)
         return self._client
 

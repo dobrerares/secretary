@@ -323,9 +323,7 @@ async def list_pending(session: AsyncSession) -> list[InboxItem]:
     """Return inbox items still awaiting attention (``pending`` or
     ``proposed``), oldest first."""
     result = await session.execute(
-        select(InboxItem)
-        .where(InboxItem.status.in_(["pending", "proposed"]))
-        .order_by(InboxItem.created_at.asc())
+        select(InboxItem).where(InboxItem.status.in_(["pending", "proposed"])).order_by(InboxItem.created_at.asc())
     )
     return list(result.scalars().all())
 

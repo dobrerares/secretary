@@ -108,9 +108,7 @@ async def _get_or_create_tag(session: AsyncSession, name: str) -> Tag:
 
 async def _load_task(session: AsyncSession, task_id: int) -> Task | None:
     result = await session.execute(
-        select(Task)
-        .options(selectinload(Task.subtasks), selectinload(Task.tags))
-        .where(Task.id == task_id)
+        select(Task).options(selectinload(Task.subtasks), selectinload(Task.tags)).where(Task.id == task_id)
     )
     return result.scalar_one_or_none()
 
@@ -286,10 +284,7 @@ def make_snapshot(entity_type: str, entity: object) -> dict:
     """
     record = _RECORDS.get(entity_type)
     if record is None:
-        raise ValueError(
-            f"{entity_type!r} is not a Root entity; only "
-            f"{sorted(_RECORDS.keys())} can be snapshotted."
-        )
+        raise ValueError(f"{entity_type!r} is not a Root entity; only {sorted(_RECORDS.keys())} can be snapshotted.")
     snapshot_fn, _, _ = record
     return snapshot_fn(entity)
 
