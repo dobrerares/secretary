@@ -1,6 +1,5 @@
 """Callback query handlers for inline keyboard buttons."""
 
-import json
 import logging
 import uuid
 
@@ -9,12 +8,7 @@ from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secretary.bot.formatters import format_task
-from secretary.bot.keyboards import (
-    confirm_keyboard,
-    edit_field_keyboard,
-    undo_keyboard,
-)
-from secretary.bot.states import EditTaskStates
+from secretary.bot.keyboards import confirm_keyboard, undo_keyboard
 from secretary.core.actions import get_last_batch_id, undo_batch
 from secretary.core import tasks as task_crud
 from secretary.core import inbox as inbox_crud
@@ -171,125 +165,91 @@ async def cb_task_edit(callback: CallbackQuery, session: AsyncSession) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Approve / Reject proposed actions  (apr:<inbox_id>:<idx>, rej:<inbox_id>:<idx>)
+# Approve / Reject Proposed actions
+#
+# Callback data format (UUID-keyed, no list-index lookup):
+#
+#   apr:<inbox_item_id>:<action_id>     approve a single Proposed action
+#   rej:<inbox_item_id>:<action_id>     reject a single Proposed action
+#   rejall:<inbox_item_id>              reject every pending Proposed action
+#
+# Logic lives in secretary.core.inbox; these handlers are thin
+# controllers that route by action_id and render the result.
 # ---------------------------------------------------------------------------
+
+
+def _parse_apr_rej(data: str) -> tuple[int, str] | None:
+    """Parse ``apr:<inbox_id>:<action_id>`` / ``rej:...`` callback data.
+
+    Returns ``(inbox_item_id, action_id)`` or ``None`` if malformed.
+    """
+    parts = data.split(":", 2)
+    if len(parts) < 3 or not parts[1].isdigit():
+        return None
+    return int(parts[1]), parts[2]
+
 
 @router.callback_query(F.data.startswith("apr:"))
 async def cb_approve_action(callback: CallbackQuery, session: AsyncSession) -> None:
-    """Approve a proposed action from a suggestion card."""
-    parts = callback.data.split(":")
-    if len(parts) < 3 or not parts[1].isdigit() or not parts[2].isdigit():
+    """Approve a single Proposed action by its UUID action_id."""
+    parsed = _parse_apr_rej(callback.data or "")
+    if parsed is None:
         await callback.answer("Invalid action.", show_alert=True)
         return
+    inbox_item_id, action_id = parsed
 
-    inbox_item_id = int(parts[1])
-    action_index = int(parts[2])
-
-    item = await inbox_crud.get_inbox_item(session, inbox_item_id)
-    if not item or not item.proposed_actions:
-        await callback.message.edit_text("This suggestion has expired.")
-        await callback.answer()
-        return
-
-    actions = item.proposed_actions
-    if action_index >= len(actions):
-        await callback.message.edit_text("Invalid action index.")
-        await callback.answer()
-        return
-
-    action = actions[action_index]
-    tool_name = action.get("tool", "")
-    arguments = action.get("args", {})
-
-    # Execute the action
-    batch_id = str(uuid.uuid4())
     try:
-        from secretary.ai.executor import execute_tool
-        result = await execute_tool(session, tool_name, arguments, batch_id)
+        result = await inbox_crud.approve_action(session, inbox_item_id, action_id)
     except Exception:
-        logger.exception("Failed to execute approved action: %s", tool_name)
+        logger.exception("Failed to approve action %s on item %s", action_id, inbox_item_id)
         await callback.message.edit_text("Failed to execute this action.")
         await callback.answer()
         return
 
-    # Mark inbox item as processed
-    await inbox_crud.process_inbox_item(session, inbox_item_id)
+    if result is None:
+        await callback.message.edit_text("This suggestion has expired.")
+        await callback.answer()
+        return
+
     await session.commit()
 
-    # Update the suggestion card to show approval
+    item = await inbox_crud.get_inbox_item(session, inbox_item_id)
+    batch_id = item.batch_id if item else None
+
     original_text = callback.message.text or callback.message.html_text or ""
+    if "error" in result.result:
+        await callback.message.edit_text(
+            f"{original_text}\n\n\u26a0\ufe0f <b>Error:</b> {result.result['error']}",
+            parse_mode="HTML",
+        )
+        await callback.answer("Action failed.", show_alert=True)
+        return
+
+    keyboard = undo_keyboard(batch_id) if batch_id else None
     await callback.message.edit_text(
         f"{original_text}\n\n\u2705 <b>Approved</b>",
-        reply_markup=undo_keyboard(batch_id),
+        reply_markup=keyboard,
         parse_mode="HTML",
     )
     await callback.answer("Action approved!")
 
 
-@router.callback_query(F.data.startswith("edt:"))
-async def cb_edit_action(callback: CallbackQuery, session: AsyncSession) -> None:
-    """Show proposed action details so the user can edit before approving."""
-    parts = callback.data.split(":")
-    if len(parts) < 3 or not parts[1].isdigit() or not parts[2].isdigit():
+@router.callback_query(F.data.startswith("rej:"))
+async def cb_reject_action(callback: CallbackQuery, session: AsyncSession) -> None:
+    """Reject a single Proposed action by its UUID action_id."""
+    parsed = _parse_apr_rej(callback.data or "")
+    if parsed is None:
         await callback.answer("Invalid action.", show_alert=True)
         return
+    inbox_item_id, action_id = parsed
 
-    inbox_item_id = int(parts[1])
-    action_index = int(parts[2])
+    ok = await inbox_crud.reject_action(session, inbox_item_id, action_id)
+    await session.commit()
 
-    item = await inbox_crud.get_inbox_item(session, inbox_item_id)
-    if not item or not item.proposed_actions:
+    if not ok:
         await callback.message.edit_text("This suggestion has expired.")
         await callback.answer()
         return
-
-    actions = item.proposed_actions
-    if action_index >= len(actions):
-        await callback.message.edit_text("Invalid action index.")
-        await callback.answer()
-        return
-
-    action = actions[action_index]
-    tool_name = action.get("tool", "unknown")
-    arguments = action.get("args", {})
-
-    # Format the action fields for editing review
-    lines = [f"\u270f\ufe0f <b>Edit suggestion: {tool_name}</b>\n"]
-    lines.append("<b>Current fields:</b>")
-    for key, value in arguments.items():
-        lines.append(f"  <b>{key}:</b> {value}")
-
-    lines.append(
-        "\nReply with changes, or use /addtask to create manually. "
-        "The suggestion has been saved \u2014 use [Approve] when ready."
-    )
-
-    # Re-show the approve/reject keyboard so the user can approve after editing
-    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Approve", callback_data=f"apr:{inbox_item_id}:{action_index}"),
-        InlineKeyboardButton(text="Reject", callback_data=f"rej:{inbox_item_id}:{action_index}"),
-    ]])
-
-    await callback.message.edit_text(
-        "\n".join(lines),
-        reply_markup=keyboard,
-        parse_mode="HTML",
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("rej:"))
-async def cb_reject_action(callback: CallbackQuery, session: AsyncSession) -> None:
-    """Reject a proposed action from a suggestion card."""
-    parts = callback.data.split(":")
-    if len(parts) < 3 or not parts[1].isdigit():
-        await callback.answer("Invalid action.", show_alert=True)
-        return
-
-    inbox_item_id = int(parts[1])
-    await inbox_crud.reject_inbox_item(session, inbox_item_id)
-    await session.commit()
 
     original_text = callback.message.text or callback.message.html_text or ""
     await callback.message.edit_text(
@@ -297,3 +257,28 @@ async def cb_reject_action(callback: CallbackQuery, session: AsyncSession) -> No
         parse_mode="HTML",
     )
     await callback.answer("Action rejected.")
+
+
+@router.callback_query(F.data.startswith("rejall:"))
+async def cb_reject_item(callback: CallbackQuery, session: AsyncSession) -> None:
+    """Reject every pending Proposed action on an inbox item."""
+    parts = (callback.data or "").split(":", 1)
+    if len(parts) < 2 or not parts[1].isdigit():
+        await callback.answer("Invalid action.", show_alert=True)
+        return
+    inbox_item_id = int(parts[1])
+
+    ok = await inbox_crud.reject_item(session, inbox_item_id)
+    await session.commit()
+
+    if not ok:
+        await callback.message.edit_text("This item has expired.")
+        await callback.answer()
+        return
+
+    original_text = callback.message.text or callback.message.html_text or ""
+    await callback.message.edit_text(
+        f"{original_text}\n\n\u274c <b>All suggestions rejected</b>",
+        parse_mode="HTML",
+    )
+    await callback.answer("Item rejected.")
