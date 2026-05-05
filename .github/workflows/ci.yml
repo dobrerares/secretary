@@ -67,7 +67,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e .
+      # CVE-2026-3219 is a finding in pip itself (the GHA runner's pip),
+      # not in our supply chain. No fix version available yet. Remove
+      # this ignore once a pip release with the fix lands.
       - uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          ignore-vulns: |
+            CVE-2026-3219
 
   docker-build:
     runs-on: ubuntu-latest
