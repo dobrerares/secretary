@@ -21,7 +21,7 @@ dependencies = [
     "aiosqlite>=0.21",
     "alembic>=1.15",
     # LLM
-    "litellm>=1.60",
+    "litellm>=1.83.14",
     # Web UI
     "jinja2>=3.1",
     # Scheduling
