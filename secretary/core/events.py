@@ -1,9 +1,13 @@
-"""Event CRUD operations with action logging."""
+"""Event CRUD operations.
+
+CRUD here is thin: it persists the change and routes the
+before/after bookkeeping through the Action seam in `core/actions`.
+"""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secretary.core.action_log import event_to_dict, record_action
+from secretary.core.actions import log_create, log_delete, log_update, make_snapshot
 from secretary.core.schemas import EventCreate, EventFilter, EventUpdate
 from secretary.db.models import Event
 
@@ -48,7 +52,7 @@ async def create_event(session: AsyncSession, data: EventCreate, batch_id: str) 
     session.add(event)
     await session.flush()
 
-    await record_action(session, "create", "event", event.id, None, event_to_dict(event), batch_id)
+    await log_create(session, "event", event, batch_id)
     return event
 
 
@@ -57,14 +61,14 @@ async def update_event(session: AsyncSession, event_id: int, data: EventUpdate, 
     if not event:
         return None
 
-    before = event_to_dict(event)
+    before = make_snapshot("event", event)
 
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(event, key, value)
 
     await session.flush()
 
-    await record_action(session, "update", "event", event.id, before, event_to_dict(event), batch_id)
+    await log_update(session, "event", before, event, batch_id)
     return event
 
 
@@ -73,9 +77,7 @@ async def delete_event(session: AsyncSession, event_id: int, batch_id: str) -> b
     if not event:
         return False
 
-    before = event_to_dict(event)
+    await log_delete(session, "event", event, batch_id)
     await session.delete(event)
     await session.flush()
-
-    await record_action(session, "delete", "event", event.id, before, None, batch_id)
     return True

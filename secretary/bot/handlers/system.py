@@ -12,7 +12,7 @@ from secretary.bot.states import OnboardStates
 
 from secretary.bot.formatters import format_inbox_item
 from secretary.bot.keyboards import confirm_keyboard
-from secretary.core.action_log import get_last_batch_id, get_recent_actions
+from secretary.core.actions import get_last_batch_id, get_recent_actions
 from secretary.core.inbox import list_pending
 from secretary.core.settings import get_settings as get_db_settings
 

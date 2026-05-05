@@ -1,4 +1,8 @@
-"""Task CRUD operations with action logging."""
+"""Task CRUD operations.
+
+CRUD here is thin: it persists the change and routes the
+before/after bookkeeping through the Action seam in `core/actions`.
+"""
 
 from datetime import datetime, timezone
 
@@ -6,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from secretary.core.action_log import record_action, task_to_dict
+from secretary.core.actions import log_create, log_delete, log_update, make_snapshot
 from secretary.core.schemas import TaskCreate, TaskFilter, TaskUpdate
 from secretary.db.models import Subtask, Tag, Task, task_tags
 
@@ -83,7 +87,7 @@ async def create_task(session: AsyncSession, data: TaskCreate, batch_id: str) ->
     # Reload to get subtasks/tags with eager loading
     task = await get_task(session, task.id)
 
-    await record_action(session, "create", "task", task.id, None, task_to_dict(task), batch_id)
+    await log_create(session, "task", task, batch_id)
     return task
 
 
@@ -92,32 +96,36 @@ async def update_task(session: AsyncSession, task_id: int, data: TaskUpdate, bat
     if not task:
         return None
 
-    before = task_to_dict(task)
+    before = make_snapshot("task", task)
 
     update_fields = data.model_dump(exclude_unset=True, exclude={"tags", "subtasks"})
     for key, value in update_fields.items():
         setattr(task, key, value)
 
-    # Update tags if provided
+    # Update tags if provided. We rewrite the association table directly
+    # then expire the relationship so the next load is fresh — without this
+    # the session's identity map shadows the raw write.
     if data.tags is not None:
         await session.execute(task_tags.delete().where(task_tags.c.task_id == task.id))
         for tag_name in data.tags:
             tag = await _get_or_create_tag(session, tag_name)
             await session.execute(task_tags.insert().values(task_id=task.id, tag_id=tag.id))
+        session.expire(task, ["tags"])
 
     # Update subtasks if provided
     if data.subtasks is not None:
-        for st in task.subtasks:
+        for st in list(task.subtasks):
             await session.delete(st)
         await session.flush()
         for i, st in enumerate(data.subtasks):
             subtask = Subtask(task_id=task.id, title=st.title, is_complete=st.is_complete, position=st.position or i)
             session.add(subtask)
+        session.expire(task, ["subtasks"])
 
     await session.flush()
     task = await get_task(session, task.id)
 
-    await record_action(session, "update", "task", task.id, before, task_to_dict(task), batch_id)
+    await log_update(session, "task", before, task, batch_id)
     return task
 
 
@@ -126,11 +134,12 @@ async def complete_task(session: AsyncSession, task_id: int, batch_id: str) -> T
     if not task:
         return None
 
-    before = task_to_dict(task)
+    before = make_snapshot("task", task)
     task.status = "done"
     await session.flush()
+    task = await get_task(session, task.id)
 
-    await record_action(session, "update", "task", task.id, before, task_to_dict(task), batch_id)
+    await log_update(session, "task", before, task, batch_id)
     return task
 
 
@@ -139,11 +148,9 @@ async def delete_task(session: AsyncSession, task_id: int, batch_id: str) -> boo
     if not task:
         return False
 
-    before = task_to_dict(task)
+    await log_delete(session, "task", task, batch_id)
     await session.delete(task)
     await session.flush()
-
-    await record_action(session, "delete", "task", task.id, before, None, batch_id)
     return True
 
 

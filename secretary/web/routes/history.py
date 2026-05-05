@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secretary.core.action_log import get_recent_actions, undo_action, undo_batch
+from secretary.core.actions import get_recent_actions, undo_action, undo_batch
 from secretary.db.models import ActionLog
 from secretary.db.session import get_session
 from secretary.web.app import templates

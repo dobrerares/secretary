@@ -15,7 +15,7 @@ from secretary.bot.keyboards import (
     undo_keyboard,
 )
 from secretary.bot.states import EditTaskStates
-from secretary.core.action_log import get_last_batch_id, undo_batch
+from secretary.core.actions import get_last_batch_id, undo_batch
 from secretary.core import tasks as task_crud
 from secretary.core import inbox as inbox_crud
 

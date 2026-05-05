@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secretary.core.action_log import get_recent_actions
+from secretary.core.actions import get_recent_actions
 from secretary.core.events import create_event, delete_event, get_event, list_events, update_event
 from secretary.core.schemas import EventCreate, EventFilter, EventUpdate
 from secretary.core.settings import get_settings

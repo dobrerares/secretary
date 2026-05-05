@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secretary.core.action_log import event_to_dict, task_to_dict
+from secretary.core.actions import make_snapshot
 from secretary.core.events import (
     create_event,
     delete_event,
@@ -47,13 +47,13 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 
 def _serialize_task(task) -> dict:
-    """Serialize a Task model to a plain dict for tool results."""
-    return task_to_dict(task)
+    """Serialize a Task to its outward-facing Snapshot for tool results."""
+    return make_snapshot("task", task)
 
 
 def _serialize_event(event) -> dict:
-    """Serialize an Event model to a plain dict for tool results."""
-    return event_to_dict(event)
+    """Serialize an Event to its outward-facing Snapshot for tool results."""
+    return make_snapshot("event", event)
 
 
 async def execute_tool(
