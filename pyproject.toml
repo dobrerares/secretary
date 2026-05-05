@@ -42,7 +42,7 @@ dependencies = [
     # Form parsing
     "python-multipart>=0.0.9",
     # Onboarding wizard
-    "InquirerPy>=0.3",
+    "InquirerPy>=0.3.4",
 ]
 
 [project.optional-dependencies]
