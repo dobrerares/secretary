@@ -9,12 +9,13 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from secretary.ai.approval import Decision, Execute, ExecuteSilent, Propose, decide
 from secretary.ai.client import LLMClient
 from secretary.ai.executor import execute_tool
 from secretary.ai.system_prompt import render_system_prompt
-from secretary.ai.tools import BY_NAME, ToolCategory, llm_schema
-from secretary.ai.validation import area_is_known
+from secretary.ai.tools import BY_NAME, llm_schema
 from secretary.config.settings import settings as app_settings
+from secretary.core.schemas import area_is_known
 from secretary.core.settings import get_settings
 from secretary.db.models import ChatMessage
 
@@ -169,39 +170,61 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
 
             action = {"tool": tool_name, "args": arguments, "call_id": call_id}
 
-            # Decide: execute now or propose for approval
-            should_execute = _should_auto_execute(action, auto_mode, known_areas)
+            # Approval policy: structurally invalid args force Propose so the
+            # user can review rather than auto-executing bogus calls. Otherwise
+            # consult the matrix in secretary/ai/approval.py.
+            decision: Decision
+            if not _args_are_valid(tool_name, arguments, known_areas):
+                decision = Propose(
+                    reason="Could not validate tool arguments — review before executing."
+                )
+            else:
+                decision = decide(BY_NAME[tool_name].category, auto_mode)
 
-            if should_execute:
-                result = await execute_tool(session, tool_name, arguments, batch_id)
-                tool_result_str = json.dumps(result, default=str)
-                messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_result_str})
-                new_messages.append({
-                    "role": "tool",
-                    "content": tool_result_str,
-                    "tool_results": {"call_id": call_id, "result": result},
-                })
-                # Track auto-executed mutating actions for status reporting
-                if BY_NAME[tool_name].category != ToolCategory.READ:
+            match decision:
+                case Execute():
+                    result = await execute_tool(session, tool_name, arguments, batch_id)
+                    tool_result_str = json.dumps(result, default=str)
+                    messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_result_str})
+                    new_messages.append({
+                        "role": "tool",
+                        "content": tool_result_str,
+                        "tool_results": {"call_id": call_id, "result": result},
+                    })
                     executed_actions.append({
                         "tool": tool_name,
                         "args": arguments,
                         "batch_id": batch_id,
                     })
-            else:
-                # Store as proposed -- give LLM a note that approval is needed
-                proposed_actions.append(action)
-                pending_note = json.dumps({
-                    "status": "pending_approval",
-                    "tool": tool_name,
-                    "message": "This action requires user approval before execution.",
-                })
-                messages.append({"role": "tool", "tool_call_id": call_id, "content": pending_note})
-                new_messages.append({
-                    "role": "tool",
-                    "content": pending_note,
-                    "tool_results": {"call_id": call_id, "status": "pending_approval"},
-                })
+                case ExecuteSilent():
+                    # Run the tool without surfacing it to the user
+                    # (READ tools, or silent mode on writes).
+                    result = await execute_tool(session, tool_name, arguments, batch_id)
+                    tool_result_str = json.dumps(result, default=str)
+                    messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_result_str})
+                    new_messages.append({
+                        "role": "tool",
+                        "content": tool_result_str,
+                        "tool_results": {"call_id": call_id, "result": result},
+                    })
+                case Propose(reason=reason):
+                    # Surface as a proposed action with the reason on the
+                    # suggestion card.
+                    proposed_action = dict(action)
+                    proposed_action["reason"] = reason
+                    proposed_actions.append(proposed_action)
+                    pending_note = json.dumps({
+                        "status": "pending_approval",
+                        "tool": tool_name,
+                        "reason": reason,
+                        "message": "This action requires user approval before execution.",
+                    })
+                    messages.append({"role": "tool", "tool_call_id": call_id, "content": pending_note})
+                    new_messages.append({
+                        "role": "tool",
+                        "content": pending_note,
+                        "tool_results": {"call_id": call_id, "status": "pending_approval", "reason": reason},
+                    })
 
         # If the LLM stopped (no more tool calls expected), capture any trailing text
         if finish_reason == "stop":
@@ -224,41 +247,6 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
         proposed_actions=proposed_actions,
         executed_actions=executed_actions,
     )
-
-
-def _should_auto_execute(action: dict, auto_mode: str, areas: list[str]) -> bool:
-    """Decide whether a tool call should be executed immediately.
-
-    Rules from CONTEXT.md "Tool category":
-    - READ tools always auto-execute (never gated)
-    - "off": nothing else auto-executes
-    - "standard": WRITE auto-executes; DESTRUCTIVE_WRITE goes to review
-    - "aggressive" / "silent": WRITE and DESTRUCTIVE_WRITE both auto-execute
-      if validation passes
-    """
-    tool = action.get("tool", "")
-    args = action.get("args") or {}
-
-    spec = BY_NAME.get(tool)
-    if spec is None:
-        return False
-
-    # READ never gated.
-    if spec.category == ToolCategory.READ:
-        return True
-
-    if auto_mode == "off":
-        return False
-
-    if auto_mode in ("aggressive", "silent"):
-        return _args_are_valid(tool, args, areas)
-
-    # "standard" mode: DESTRUCTIVE_WRITE goes to review.
-    if spec.category == ToolCategory.DESTRUCTIVE_WRITE:
-        return False
-
-    # WRITE: validate then execute.
-    return _args_are_valid(tool, args, areas)
 
 
 async def _load_chat_history(session: AsyncSession, limit: int = DEFAULT_HISTORY_LIMIT) -> list[dict]:

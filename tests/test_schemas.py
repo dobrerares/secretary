@@ -172,50 +172,42 @@ def test_event_update_args_rejects_negative_event_id():
         EventUpdateArgs(event_id=-5)
 
 
-# --- is_destructive new signature: takes tool name string ---
-
-
-def test_is_destructive_accepts_tool_name_string():
-    from secretary.ai.validation import is_destructive
-
-    assert is_destructive("delete_task") is True
-    assert is_destructive("delete_event") is True
-    assert is_destructive("create_task") is False
-    assert is_destructive("") is False
-    assert is_destructive("unknown") is False
-
-
-# --- area_is_known semantics preserved ---
+# --- area_is_known semantics preserved (now lives in core.schemas) ---
 
 
 def test_area_is_known_none_area_is_always_ok():
-    from secretary.ai.validation import area_is_known
+    from secretary.core.schemas import area_is_known
 
     assert area_is_known(None, ["work", "personal"]) is True
 
 
 def test_area_is_known_empty_user_areas_accepts_any():
-    from secretary.ai.validation import area_is_known
+    from secretary.core.schemas import area_is_known
 
     assert area_is_known("anything", []) is True
 
 
 def test_area_is_known_rejects_unknown_area():
-    from secretary.ai.validation import area_is_known
+    from secretary.core.schemas import area_is_known
 
     assert area_is_known("mystery", ["work", "personal"]) is False
 
 
 def test_area_is_known_accepts_known_area():
-    from secretary.ai.validation import area_is_known
+    from secretary.core.schemas import area_is_known
 
     assert area_is_known("work", ["work", "personal"]) is True
 
 
-# --- validate_proposed_action must be deleted ---
+# --- secretary.ai.validation module is deleted entirely ---
+#
+# Issue #4 collapsed the auto-approve gate into ai/approval.py and moved the
+# remaining domain helper (area_is_known) into core/schemas.py. Importing the
+# old module must now fail.
 
 
-def test_validate_proposed_action_is_gone():
-    import secretary.ai.validation as validation_module
+def test_ai_validation_module_is_gone():
+    import pytest
 
-    assert not hasattr(validation_module, "validate_proposed_action")
+    with pytest.raises(ImportError):
+        import secretary.ai.validation  # noqa: F401
