@@ -310,3 +310,26 @@ class UpdateMemoryArgs(BaseModel):
     """Args for the `update_memory` tool call."""
 
     fact: str = Field(min_length=1)
+
+
+# --- Domain helpers ---------------------------------------------------------
+#
+# Pydantic owns structural validity; the helpers below cover invariants Pydantic
+# cannot express because they depend on runtime configuration.
+
+
+def area_is_known(area: str | None, user_areas: list[str]) -> bool:
+    """Return True if ``area`` is one the user has configured.
+
+    Pydantic cannot enforce this — the user's areas are runtime config, not a
+    static enum. Conventions:
+
+    - ``area is None`` (no area set) is always allowed.
+    - If the user has not configured any areas, accept any string.
+    - Otherwise the area must be in ``user_areas``.
+    """
+    if area is None:
+        return True
+    if not user_areas:
+        return True
+    return area in user_areas
