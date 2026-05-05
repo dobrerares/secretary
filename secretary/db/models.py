@@ -225,7 +225,13 @@ class ActionLog(Base):
     )
     entity_type: Mapped[str] = mapped_column(
         String(16),
-        CheckConstraint("entity_type IN ('task', 'event', 'inbox_item', 'subtask')"),
+        # Only Root entities (Task, Event) get an Action seam — subtasks
+        # and tags ride inside their root's Snapshot, inbox items are
+        # workflow staging.
+        CheckConstraint(
+            "entity_type IN ('task', 'event')",
+            name="ck_action_log_entity_type",
+        ),
         nullable=False,
     )
     entity_id: Mapped[int] = mapped_column(Integer, nullable=False)

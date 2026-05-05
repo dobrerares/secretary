@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secretary.config.settings import settings as app_settings
-from secretary.core.action_log import get_recent_actions
+from secretary.core.actions import get_recent_actions
 from secretary.core.schemas import SubtaskCreate, TaskCreate, TaskFilter, TaskUpdate
 from secretary.core.settings import get_settings
 from secretary.core.tasks import complete_task, create_task, delete_task, get_task, list_tasks, update_task
