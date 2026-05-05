@@ -43,6 +43,7 @@ class GoogleCalendarSync:
         if CLIENT_SECRET_FILE.exists():
             return
         from secretary.config.settings import settings
+
         if not settings.google_client_id or not settings.google_client_secret:
             raise ValueError("Google Calendar client ID and secret not configured")
         payload = {

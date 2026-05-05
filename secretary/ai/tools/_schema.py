@@ -108,9 +108,7 @@ def _massage_field(fschema: dict, defs: dict) -> dict:
 
     # Recurse into nested object properties (from $defs).
     if cleaned.get("type") == "object" and "properties" in cleaned:
-        cleaned["properties"] = {
-            k: _massage_field(v, defs) for k, v in cleaned["properties"].items()
-        }
+        cleaned["properties"] = {k: _massage_field(v, defs) for k, v in cleaned["properties"].items()}
 
     return cleaned
 

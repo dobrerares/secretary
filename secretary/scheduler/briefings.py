@@ -4,7 +4,6 @@ import logging
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secretary.config.settings import settings as app_settings
@@ -12,7 +11,6 @@ from secretary.core.events import list_events
 from secretary.core.schemas import EventFilter, TaskFilter
 from secretary.core.settings import get_settings
 from secretary.core.tasks import list_tasks
-from secretary.db.models import Task
 from secretary.db.session import async_session_factory
 
 logger = logging.getLogger(__name__)
@@ -49,12 +47,8 @@ async def _build_daily_text(session: AsyncSession) -> str:
 
     now_utc = datetime.now(timezone.utc)
     now_local = now_utc.astimezone(tz)
-    today_start = datetime.combine(now_local.date(), time.min, tzinfo=tz).astimezone(
-        timezone.utc
-    )
-    today_end = datetime.combine(now_local.date(), time.max, tzinfo=tz).astimezone(
-        timezone.utc
-    )
+    today_start = datetime.combine(now_local.date(), time.min, tzinfo=tz).astimezone(timezone.utc)
+    today_end = datetime.combine(now_local.date(), time.max, tzinfo=tz).astimezone(timezone.utc)
 
     # --- Queries ---
     today_events = await list_events(
@@ -90,9 +84,7 @@ async def _build_daily_text(session: AsyncSession) -> str:
             if ev.is_all_day:
                 parts.append(f"  All day -- {ev.title}")
             elif ev_start and ev_end:
-                parts.append(
-                    f"  {ev_start.strftime('%H:%M')}-{ev_end.strftime('%H:%M')} -- {ev.title}"
-                )
+                parts.append(f"  {ev_start.strftime('%H:%M')}-{ev_end.strftime('%H:%M')} -- {ev.title}")
             else:
                 parts.append(f"  {ev.title}")
     else:
@@ -150,17 +142,13 @@ async def _build_weekly_text(session: AsyncSession) -> str:
         time.min,
         tzinfo=tz,
     ).astimezone(timezone.utc)
-    week_end = datetime.combine(now_local.date(), time.max, tzinfo=tz).astimezone(
-        timezone.utc
-    )
+    week_end = datetime.combine(now_local.date(), time.max, tzinfo=tz).astimezone(timezone.utc)
 
     # Next week
-    next_week_start = datetime.combine(
-        now_local.date() + timedelta(days=1), time.min, tzinfo=tz
-    ).astimezone(timezone.utc)
-    next_week_end = datetime.combine(
-        now_local.date() + timedelta(days=7), time.max, tzinfo=tz
-    ).astimezone(timezone.utc)
+    next_week_start = datetime.combine(now_local.date() + timedelta(days=1), time.min, tzinfo=tz).astimezone(
+        timezone.utc
+    )
+    next_week_end = datetime.combine(now_local.date() + timedelta(days=7), time.max, tzinfo=tz).astimezone(timezone.utc)
 
     # --- Queries ---
     # Completed this week
@@ -170,12 +158,7 @@ async def _build_weekly_text(session: AsyncSession) -> str:
     )
     # Also grab completed tasks without due dates that were updated this week
     all_done = await list_tasks(session, TaskFilter(status="done"))
-    recently_done = [
-        t
-        for t in all_done
-        if t.updated_at
-        and t.updated_at >= week_start.replace(tzinfo=None)
-    ]
+    recently_done = [t for t in all_done if t.updated_at and t.updated_at >= week_start.replace(tzinfo=None)]
     # Merge and deduplicate
     completed_ids = {t.id for t in completed_tasks}
     for t in recently_done:

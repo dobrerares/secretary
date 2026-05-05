@@ -74,9 +74,7 @@ Decision = Execute | ExecuteSilent | Propose
 # Reason strings for the Propose paths — kept short and consistent so the
 # suggestion card stays scannable.
 _REASON_OFF = "Auto-approve is off. Review and approve to execute."
-_REASON_DESTRUCTIVE_STANDARD = (
-    "Destructive action — requires approval in standard mode."
-)
+_REASON_DESTRUCTIVE_STANDARD = "Destructive action — requires approval in standard mode."
 
 
 def decide(category: ToolCategory, mode: AutoApproveMode) -> Decision:

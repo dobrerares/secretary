@@ -15,7 +15,6 @@ from secretary.bot.keyboards import (
     confirm_create_task_keyboard,
     edit_field_keyboard,
     priority_keyboard,
-    task_actions_keyboard,
     undo_keyboard,
 )
 from secretary.bot.states import AddTaskStates, EditTaskStates
@@ -30,6 +29,7 @@ router = Router()
 # Date parsing helper
 # ---------------------------------------------------------------------------
 
+
 def _parse_date(text: str) -> datetime | None:
     """Parse natural date strings into UTC datetimes."""
     text = text.strip().lower()
@@ -42,9 +42,20 @@ def _parse_date(text: str) -> datetime | None:
         return today + timedelta(days=1)
 
     day_names = {
-        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
-        "friday": 4, "saturday": 5, "sunday": 6,
-        "mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6,
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+        "mon": 0,
+        "tue": 1,
+        "wed": 2,
+        "thu": 3,
+        "fri": 4,
+        "sat": 5,
+        "sun": 6,
     }
     if text in day_names:
         target = day_names[text]
@@ -68,6 +79,7 @@ def _parse_date(text: str) -> datetime | None:
 # ---------------------------------------------------------------------------
 # /addtask  -- FSM flow
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("addtask"))
 async def cmd_addtask(message: Message, state: FSMContext, session: AsyncSession) -> None:
@@ -214,6 +226,7 @@ async def addtask_confirm_no(callback: CallbackQuery, state: FSMContext) -> None
 # /tasks  -- list / filter
 # ---------------------------------------------------------------------------
 
+
 @router.message(Command("tasks"))
 async def cmd_tasks(message: Message, session: AsyncSession) -> None:
     args = message.text.split(maxsplit=1)
@@ -262,6 +275,7 @@ async def cmd_tasks(message: Message, session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 # /done  -- mark task complete
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("done"))
 async def cmd_done(message: Message, session: AsyncSession) -> None:
@@ -316,6 +330,7 @@ async def cmd_done(message: Message, session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 # /edit  -- edit a task
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("edit"))
 async def cmd_edit(message: Message, state: FSMContext, session: AsyncSession) -> None:
@@ -421,6 +436,7 @@ async def edit_value(message: Message, state: FSMContext, session: AsyncSession)
 # ---------------------------------------------------------------------------
 # /delete  -- delete a task
 # ---------------------------------------------------------------------------
+
 
 @router.message(Command("delete"))
 async def cmd_delete(message: Message, session: AsyncSession) -> None:

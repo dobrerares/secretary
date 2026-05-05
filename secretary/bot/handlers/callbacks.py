@@ -22,6 +22,7 @@ router = Router()
 # Confirm Yes/No  (callback data: cfm:y:<action>:<id> / cfm:n:<action>:<id>)
 # ---------------------------------------------------------------------------
 
+
 @router.callback_query(F.data.startswith("cfm:y:"))
 async def cb_confirm_yes(callback: CallbackQuery, session: AsyncSession) -> None:
     parts = callback.data.split(":")
@@ -68,6 +69,7 @@ async def cb_confirm_no(callback: CallbackQuery) -> None:
 # Undo button  (callback data: undo:<short_batch_id>)
 # ---------------------------------------------------------------------------
 
+
 @router.callback_query(F.data.startswith("undo:"))
 async def cb_undo(callback: CallbackQuery, session: AsyncSession) -> None:
     short_id = callback.data.split(":", 1)[1]
@@ -78,9 +80,7 @@ async def cb_undo(callback: CallbackQuery, session: AsyncSession) -> None:
         count = await undo_batch(session, last_batch)
         await session.commit()
         if count > 0:
-            await callback.message.edit_text(
-                callback.message.text + f"\n\n\u21a9 Undone ({count} action(s))."
-            )
+            await callback.message.edit_text(callback.message.text + f"\n\n\u21a9 Undone ({count} action(s)).")
         else:
             await callback.answer("Nothing to undo (may have expired).", show_alert=True)
     else:
@@ -92,6 +92,7 @@ async def cb_undo(callback: CallbackQuery, session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 # Task quick actions  (done:<id>, del:<id>, edit:<id>)
 # ---------------------------------------------------------------------------
+
 
 @router.callback_query(F.data.startswith("done:"))
 async def cb_task_done(callback: CallbackQuery, session: AsyncSession) -> None:
@@ -141,7 +142,6 @@ async def cb_task_delete(callback: CallbackQuery, session: AsyncSession) -> None
 
 @router.callback_query(F.data.startswith("edit:"))
 async def cb_task_edit(callback: CallbackQuery, session: AsyncSession) -> None:
-    from aiogram.fsm.context import FSMContext
 
     task_id_str = callback.data.split(":", 1)[1]
     if not task_id_str.isdigit():

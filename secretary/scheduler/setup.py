@@ -1,7 +1,6 @@
 """APScheduler setup -- create scheduler, register jobs, start/stop."""
 
 import logging
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -95,6 +94,7 @@ async def start_scheduler() -> None:
 
     # Calendar sync -- every N minutes (default 15)
     from secretary.config.settings import settings as app_settings
+
     sync_interval = app_settings.calendar_sync_interval_minutes
     scheduler.add_job(
         calendar_sync_job,

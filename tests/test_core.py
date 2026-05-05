@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from secretary.core.actions import get_recent_actions, undo_action, undo_batch
-from secretary.core.events import create_event, delete_event, get_event, list_events, update_event
+from secretary.core.events import create_event, delete_event, get_event, update_event
 from secretary.core.schemas import EventCreate, EventUpdate, TaskCreate, TaskFilter, TaskUpdate
 from secretary.core.tasks import complete_task, create_task, delete_task, get_task, list_tasks, update_task
 

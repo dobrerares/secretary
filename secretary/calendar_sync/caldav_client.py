@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import uuid
 from datetime import datetime, timezone
 from functools import partial
-from textwrap import dedent
 from typing import TYPE_CHECKING
 
 import caldav

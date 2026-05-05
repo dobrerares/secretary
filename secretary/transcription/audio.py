@@ -20,10 +20,13 @@ async def convert_ogg_to_wav(ogg_path: str) -> str:
 
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg",
-        "-y",            # overwrite without asking
-        "-i", ogg_path,
-        "-ar", "16000",  # 16 kHz sample rate
-        "-ac", "1",      # mono
+        "-y",  # overwrite without asking
+        "-i",
+        ogg_path,
+        "-ar",
+        "16000",  # 16 kHz sample rate
+        "-ac",
+        "1",  # mono
         wav_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,

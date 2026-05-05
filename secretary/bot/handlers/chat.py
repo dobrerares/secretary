@@ -23,17 +23,25 @@ router = Router()
 
 def _suggestion_keyboard(inbox_item_id: int, action_id: str) -> InlineKeyboardMarkup:
     """Build [Approve] [Reject] buttons keyed by Proposed action UUID."""
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Approve", callback_data=f"apr:{inbox_item_id}:{action_id}"),
-        InlineKeyboardButton(text="Reject", callback_data=f"rej:{inbox_item_id}:{action_id}"),
-    ]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Approve", callback_data=f"apr:{inbox_item_id}:{action_id}"),
+                InlineKeyboardButton(text="Reject", callback_data=f"rej:{inbox_item_id}:{action_id}"),
+            ]
+        ]
+    )
 
 
 def _undo_keyboard(batch_id: str) -> InlineKeyboardMarkup:
     """Build [Undo] keyboard for an auto-executed action."""
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="Undo", callback_data=f"undo:{batch_id}"),
-    ]])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Undo", callback_data=f"undo:{batch_id}"),
+            ]
+        ]
+    )
 
 
 async def _render(message: Message, result: ProcessResult, *, surface_executed: bool) -> None:
@@ -77,8 +85,7 @@ async def handle_chat_message(message: Message, session: AsyncSession) -> None:
         logger.exception("AI processing failed for message: %s", text[:100])
         await session.commit()
         await message.answer(
-            "Sorry, I couldn't process that right now. "
-            "You can still use slash commands like /addtask or /help."
+            "Sorry, I couldn't process that right now. You can still use slash commands like /addtask or /help."
         )
         return
 

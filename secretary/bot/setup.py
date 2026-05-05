@@ -81,21 +81,24 @@ async def start_bot(app=None) -> None:
 
     # Register slash command hints with Telegram so they appear in the / menu
     from aiogram.types import BotCommand
-    await bot.set_my_commands([
-        BotCommand(command="addtask", description="Add a new task"),
-        BotCommand(command="tasks", description="List tasks (today, overdue, area)"),
-        BotCommand(command="done", description="Mark a task complete"),
-        BotCommand(command="edit", description="Edit a task"),
-        BotCommand(command="delete", description="Delete a task"),
-        BotCommand(command="addevent", description="Add a new event"),
-        BotCommand(command="agenda", description="Today's agenda"),
-        BotCommand(command="inbox", description="Pending inbox items"),
-        BotCommand(command="undo", description="Undo the last action"),
-        BotCommand(command="sync", description="Sync calendars now"),
-        BotCommand(command="briefing", description="Get your daily briefing"),
-        BotCommand(command="settings", description="View settings"),
-        BotCommand(command="help", description="Show all commands"),
-    ])
+
+    await bot.set_my_commands(
+        [
+            BotCommand(command="addtask", description="Add a new task"),
+            BotCommand(command="tasks", description="List tasks (today, overdue, area)"),
+            BotCommand(command="done", description="Mark a task complete"),
+            BotCommand(command="edit", description="Edit a task"),
+            BotCommand(command="delete", description="Delete a task"),
+            BotCommand(command="addevent", description="Add a new event"),
+            BotCommand(command="agenda", description="Today's agenda"),
+            BotCommand(command="inbox", description="Pending inbox items"),
+            BotCommand(command="undo", description="Undo the last action"),
+            BotCommand(command="sync", description="Sync calendars now"),
+            BotCommand(command="briefing", description="Get your daily briefing"),
+            BotCommand(command="settings", description="View settings"),
+            BotCommand(command="help", description="Show all commands"),
+        ]
+    )
 
     if settings.bot_mode == "webhook":
         webhook_url = settings.webhook_url.rstrip("/") + "/webhook/telegram"
@@ -142,7 +145,6 @@ async def telegram_webhook_handler(request) -> dict:
     Mount this at ``/webhook/telegram``.  Telegram POSTs JSON-encoded
     ``Update`` objects which are fed directly into the aiogram dispatcher.
     """
-    from fastapi import Request
 
     if bot is None:
         return {"ok": False, "error": "bot not initialised"}

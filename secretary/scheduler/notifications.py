@@ -53,9 +53,7 @@ async def check_reminders_job() -> None:
 
                 local_due = task.due_at.astimezone(tz) if task.due_at else None
                 due_str = local_due.strftime("%H:%M") if local_due else "soon"
-                messages.append(
-                    f"<b>Reminder:</b> \"{task.title}\" is due at {due_str}  #{task.id}"
-                )
+                messages.append(f'<b>Reminder:</b> "{task.title}" is due at {due_str}  #{task.id}')
                 _reminded[task.id] = now_utc
 
             # ------------------------------------------------------------------
@@ -110,9 +108,7 @@ def _was_recently_reminded(task_id: int, now: datetime) -> bool:
     return (now - last) < _REMINDER_COOLDOWN
 
 
-async def _detect_conflicts(
-    session, tz: ZoneInfo, now_utc: datetime
-) -> list[str]:
+async def _detect_conflicts(session, tz: ZoneInfo, now_utc: datetime) -> list[str]:
     """Find overlapping events in the next 3 hours."""
     window_end = now_utc + timedelta(hours=3)
     events = await list_events(
@@ -126,16 +122,11 @@ async def _detect_conflicts(
             if ev_a.start_at < ev_b.end_at and ev_b.start_at < ev_a.end_at:
                 a_start = ev_a.start_at.astimezone(tz).strftime("%H:%M")
                 b_start = ev_b.start_at.astimezone(tz).strftime("%H:%M")
-                messages.append(
-                    f"<b>Conflict:</b> \"{ev_a.title}\" ({a_start}) "
-                    f"overlaps with \"{ev_b.title}\" ({b_start})"
-                )
+                messages.append(f'<b>Conflict:</b> "{ev_a.title}" ({a_start}) overlaps with "{ev_b.title}" ({b_start})')
     return messages
 
 
-async def _context_switch_alerts(
-    session, tz: ZoneInfo, now_utc: datetime
-) -> list[str]:
+async def _context_switch_alerts(session, tz: ZoneInfo, now_utc: datetime) -> list[str]:
     """Alert about events starting in the next 15 minutes with pending tasks for that area."""
     window_end = now_utc + timedelta(minutes=15)
     upcoming_events = await list_events(
@@ -146,7 +137,6 @@ async def _context_switch_alerts(
     messages: list[str] = []
     for ev in upcoming_events:
         area = ev.area
-        local_start = ev.start_at.astimezone(tz) if ev.start_at else None
         mins = int((ev.start_at - now_utc).total_seconds() / 60) if ev.start_at else 0
 
         # Gather pending tasks for this event's area
@@ -159,15 +149,11 @@ async def _context_switch_alerts(
                 if len(area_tasks) > 3:
                     task_list_str += f" (+{len(area_tasks) - 3} more)"
 
-        messages.append(
-            f"\U0001f4cd Your <b>\"{ev.title}\"</b> starts in {mins} min.{task_list_str}"
-        )
+        messages.append(f'\U0001f4cd Your <b>"{ev.title}"</b> starts in {mins} min.{task_list_str}')
     return messages
 
 
-async def _idle_nudge(
-    session, tz: ZoneInfo, now_utc: datetime
-) -> str | None:
+async def _idle_nudge(session, tz: ZoneInfo, now_utc: datetime) -> str | None:
     """If no tasks are in_progress and there are pending tasks, nudge."""
     in_progress = await list_tasks(session, TaskFilter(status="in_progress"))
     if in_progress:
@@ -178,7 +164,4 @@ async def _idle_nudge(
         return None
 
     top = active_tasks[0]
-    return (
-        f"<b>Nudge:</b> You have no tasks in progress. "
-        f"How about starting \"{top.title}\"?  #{top.id}"
-    )
+    return f'<b>Nudge:</b> You have no tasks in progress. How about starting "{top.title}"?  #{top.id}'

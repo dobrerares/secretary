@@ -121,10 +121,7 @@ async def process_message(
     item = await inbox.capture(session, raw_text=user_text, source=source)
 
     user_settings = await get_settings(session)
-    history_limit = (
-        getattr(user_settings, "ai_context_messages", DEFAULT_HISTORY_LIMIT)
-        or DEFAULT_HISTORY_LIMIT
-    )
+    history_limit = getattr(user_settings, "ai_context_messages", DEFAULT_HISTORY_LIMIT) or DEFAULT_HISTORY_LIMIT
     history_messages = await _load_chat_history(session, limit=history_limit)
     system_prompt = render_system_prompt(user_settings)
 
@@ -135,9 +132,7 @@ async def process_message(
     new_messages: list[dict] = [{"role": "user", "content": user_text}]
 
     auto_mode = user_settings.auto_approve_mode
-    known_areas: list[str] = (
-        list(user_settings.areas) if isinstance(user_settings.areas, list) else []
-    )
+    known_areas: list[str] = list(user_settings.areas) if isinstance(user_settings.areas, list) else []
 
     # Single batch_id for the whole AI run — attach_actions will record
     # it on the item, and approve_action reuses it later so undo-batch
@@ -164,11 +159,13 @@ async def process_message(
         if tool_calls:
             assistant_message_dict["tool_calls"] = tool_calls
         messages.append(assistant_message_dict)
-        new_messages.append({
-            "role": "assistant",
-            "content": content,
-            "tool_calls": tool_calls if tool_calls else None,
-        })
+        new_messages.append(
+            {
+                "role": "assistant",
+                "content": content,
+                "tool_calls": tool_calls if tool_calls else None,
+            }
+        )
 
         if not tool_calls:
             final_text = content
@@ -255,11 +252,13 @@ async def _handle_tool_call(
         tool_result = {"error": f"Unknown tool: {tool_name}"}
         tool_result_str = json.dumps(tool_result)
         messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_result_str})
-        new_messages.append({
-            "role": "tool",
-            "content": tool_result_str,
-            "tool_results": {"call_id": call_id, "result": tool_result},
-        })
+        new_messages.append(
+            {
+                "role": "tool",
+                "content": tool_result_str,
+                "tool_results": {"call_id": call_id, "result": tool_result},
+            }
+        )
         return
 
     # Decide: invalid args force Propose, otherwise consult the matrix
@@ -275,45 +274,51 @@ async def _handle_tool_call(
             result = await execute_tool(session, tool_name, arguments, batch_id)
             tool_result_str = json.dumps(result, default=str)
             messages.append({"role": "tool", "tool_call_id": call_id, "content": tool_result_str})
-            new_messages.append({
-                "role": "tool",
-                "content": tool_result_str,
-                "tool_results": {"call_id": call_id, "result": result},
-            })
-            executed.append({
-                "tool": tool_name,
-                "args": arguments,
-                "batch_id": batch_id,
-                "silent": silent,
-                "result": result,
-            })
+            new_messages.append(
+                {
+                    "role": "tool",
+                    "content": tool_result_str,
+                    "tool_results": {"call_id": call_id, "result": result},
+                }
+            )
+            executed.append(
+                {
+                    "tool": tool_name,
+                    "args": arguments,
+                    "batch_id": batch_id,
+                    "silent": silent,
+                    "result": result,
+                }
+            )
         case Propose(reason=reason):
-            proposed.append({
-                "tool": tool_name,
-                "args": arguments,
-                "reason": reason,
-            })
-            pending_note = json.dumps({
-                "status": "pending_approval",
-                "tool": tool_name,
-                "reason": reason,
-                "message": "This action requires user approval before execution.",
-            })
+            proposed.append(
+                {
+                    "tool": tool_name,
+                    "args": arguments,
+                    "reason": reason,
+                }
+            )
+            pending_note = json.dumps(
+                {
+                    "status": "pending_approval",
+                    "tool": tool_name,
+                    "reason": reason,
+                    "message": "This action requires user approval before execution.",
+                }
+            )
             messages.append({"role": "tool", "tool_call_id": call_id, "content": pending_note})
-            new_messages.append({
-                "role": "tool",
-                "content": pending_note,
-                "tool_results": {"call_id": call_id, "status": "pending_approval", "reason": reason},
-            })
+            new_messages.append(
+                {
+                    "role": "tool",
+                    "content": pending_note,
+                    "tool_results": {"call_id": call_id, "status": "pending_approval", "reason": reason},
+                }
+            )
 
 
 async def _load_chat_history(session: AsyncSession, limit: int = DEFAULT_HISTORY_LIMIT) -> list[dict]:
     """Load recent chat messages and reconstruct the messages array."""
-    result = await session.execute(
-        select(ChatMessage)
-        .order_by(ChatMessage.created_at.desc())
-        .limit(limit)
-    )
+    result = await session.execute(select(ChatMessage).order_by(ChatMessage.created_at.desc()).limit(limit))
     rows = list(reversed(result.scalars().all()))
 
     messages: list[dict] = []

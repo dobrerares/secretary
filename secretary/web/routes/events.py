@@ -23,6 +23,7 @@ router = APIRouter(prefix="/events", tags=["web-events"])
 async def _undo_redirect(session: AsyncSession, url: str, msg: str) -> RedirectResponse:
     """Redirect with undo query params from the most recent action."""
     from urllib.parse import urlencode
+
     actions = await get_recent_actions(session, limit=1)
     if actions:
         sep = "&" if "?" in url else "?"
@@ -58,6 +59,7 @@ def _parse_dt(value: str | None) -> datetime | None:
 # ---------------------------------------------------------------------------
 # Calendar (month view)
 # ---------------------------------------------------------------------------
+
 
 @router.get("", response_class=HTMLResponse)
 async def events_root():
@@ -151,6 +153,7 @@ async def events_calendar(
 # Agenda (day / week view)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/agenda", response_class=HTMLResponse)
 async def events_agenda(
     request: Request,
@@ -202,14 +205,19 @@ async def events_agenda(
 # Create / Edit
 # ---------------------------------------------------------------------------
 
+
 @router.get("/new", response_class=HTMLResponse)
 async def event_new(request: Request, session: AsyncSession = Depends(get_session)):
     user_settings = await get_settings(session)
-    return templates.TemplateResponse(request, "events/form.html", {
-        "event": None,
-        "areas": user_settings.areas or [],
-        "editing": False,
-    })
+    return templates.TemplateResponse(
+        request,
+        "events/form.html",
+        {
+            "event": None,
+            "areas": user_settings.areas or [],
+            "editing": False,
+        },
+    )
 
 
 @router.post("", response_class=HTMLResponse)
@@ -232,7 +240,7 @@ async def event_create(request: Request, session: AsyncSession = Depends(get_ses
     await create_event(session, data, batch_id)
     await session.commit()
 
-    return await _undo_redirect(session, "/web/events/calendar", f"Event \"{data.title}\" created")
+    return await _undo_redirect(session, "/web/events/calendar", f'Event "{data.title}" created')
 
 
 @router.get("/{event_id}/edit", response_class=HTMLResponse)
@@ -242,11 +250,15 @@ async def event_edit(request: Request, event_id: int, session: AsyncSession = De
         return RedirectResponse(url="/web/events/calendar", status_code=303)
 
     user_settings = await get_settings(session)
-    return templates.TemplateResponse(request, "events/form.html", {
-        "event": event,
-        "areas": user_settings.areas or [],
-        "editing": True,
-    })
+    return templates.TemplateResponse(
+        request,
+        "events/form.html",
+        {
+            "event": event,
+            "areas": user_settings.areas or [],
+            "editing": True,
+        },
+    )
 
 
 @router.post("/{event_id}", response_class=HTMLResponse)
@@ -269,7 +281,7 @@ async def event_update(request: Request, event_id: int, session: AsyncSession = 
     await update_event(session, event_id, data, batch_id)
     await session.commit()
 
-    return await _undo_redirect(session, "/web/events/calendar", f"Event \"{data.title}\" updated")
+    return await _undo_redirect(session, "/web/events/calendar", f'Event "{data.title}" updated')
 
 
 @router.post("/{event_id}/delete", response_class=HTMLResponse)

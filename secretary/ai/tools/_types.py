@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession

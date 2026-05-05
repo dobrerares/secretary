@@ -51,7 +51,16 @@ def note(lines: list[str], title: str | None = None) -> None:
     else:
         print(f"{D}┌{'─' * w}┐{R}")
     for line in lines:
-        visible = len(line.replace(B, "").replace(D, "").replace(R, "").replace(GREEN, "").replace(YELLOW, "").replace(CYAN, "").replace(RED, "").replace(MAGENTA, ""))
+        visible = len(
+            line.replace(B, "")
+            .replace(D, "")
+            .replace(R, "")
+            .replace(GREEN, "")
+            .replace(YELLOW, "")
+            .replace(CYAN, "")
+            .replace(RED, "")
+            .replace(MAGENTA, "")
+        )
         padding = max(w - visible - 2, 0)
         print(f"{border} {line}{' ' * padding}{border}")
     print(f"{D}└{'─' * w}┘{R}")
@@ -170,7 +179,10 @@ PROVIDERS = [
         "env_key": "TOGETHER_API_KEY",
         "key_url": "https://api.together.xyz/settings/api-keys",
         "models": [
-            {"name": "Llama 3.3 70B       best open model", "value": "together_ai/meta-llama/Llama-3.3-70B-Instruct-Turbo"},
+            {
+                "name": "Llama 3.3 70B       best open model",
+                "value": "together_ai/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            },
             {"name": "Qwen 2.5 72B        strong all-round", "value": "together_ai/Qwen/Qwen2.5-72B-Instruct-Turbo"},
             {"name": "DeepSeek V3         very capable", "value": "together_ai/deepseek-ai/DeepSeek-V3"},
             {"name": "Mixtral 8x22B       large MoE", "value": "together_ai/mistralai/Mixtral-8x22B-Instruct-v0.1"},
@@ -182,9 +194,18 @@ PROVIDERS = [
         "env_key": "FIREWORKS_API_KEY",
         "key_url": "https://fireworks.ai/account/api-keys",
         "models": [
-            {"name": "Llama 3.3 70B       fast & capable", "value": "fireworks_ai/accounts/fireworks/models/llama-v3p3-70b-instruct"},
-            {"name": "Qwen 2.5 72B        strong coder", "value": "fireworks_ai/accounts/fireworks/models/qwen2p5-72b-instruct"},
-            {"name": "Mixtral MoE 8x7B    efficient", "value": "fireworks_ai/accounts/fireworks/models/mixtral-8x7b-instruct"},
+            {
+                "name": "Llama 3.3 70B       fast & capable",
+                "value": "fireworks_ai/accounts/fireworks/models/llama-v3p3-70b-instruct",
+            },
+            {
+                "name": "Qwen 2.5 72B        strong coder",
+                "value": "fireworks_ai/accounts/fireworks/models/qwen2p5-72b-instruct",
+            },
+            {
+                "name": "Mixtral MoE 8x7B    efficient",
+                "value": "fireworks_ai/accounts/fireworks/models/mixtral-8x7b-instruct",
+            },
         ],
     },
     {
@@ -267,15 +288,20 @@ def pick_model(provider: dict) -> str:
     ).execute()
 
     if selected == "__custom__":
-        return inquirer.text(
-            message="Model ID (LiteLLM format)",
-            validate=lambda v: len(v.strip()) > 0,
-        ).execute().strip()
+        return (
+            inquirer.text(
+                message="Model ID (LiteLLM format)",
+                validate=lambda v: len(v.strip()) > 0,
+            )
+            .execute()
+            .strip()
+        )
 
     return selected
 
 
 # ── Main flow ────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     print(LOGO)
@@ -330,9 +356,9 @@ def main() -> None:
             "Secretary only responds to YOUR messages.",
             "It needs your numeric Telegram user ID to identify you.",
             "",
-            f"How to find it:",
+            "How to find it:",
             f"  1. Message {B}@userinfobot{R} on Telegram",
-            f"  2. It instantly replies with your ID",
+            "  2. It instantly replies with your ID",
             f"     (a number like {D}123456789{R})",
             "",
             f"{D}This is NOT your username — it's a number.{R}",
@@ -341,10 +367,14 @@ def main() -> None:
     )
     print()
 
-    user_id = inquirer.text(
-        message="Telegram user ID (number)",
-        validate=lambda v: v.strip().isdigit() or "Must be a number — message @userinfobot on Telegram to get it",
-    ).execute().strip()
+    user_id = (
+        inquirer.text(
+            message="Telegram user ID (number)",
+            validate=lambda v: v.strip().isdigit() or "Must be a number — message @userinfobot on Telegram to get it",
+        )
+        .execute()
+        .strip()
+    )
     config["SECRETARY_TELEGRAM_USER_ID"] = user_id
     success(f"User ID: {user_id}")
 
@@ -378,10 +408,14 @@ def main() -> None:
     ).execute()
 
     if provider_id == "__custom__":
-        model = inquirer.text(
-            message="LiteLLM model string (e.g. groq/llama3-70b)",
-            validate=lambda v: len(v.strip()) > 0,
-        ).execute().strip()
+        model = (
+            inquirer.text(
+                message="LiteLLM model string (e.g. groq/llama3-70b)",
+                validate=lambda v: len(v.strip()) > 0,
+            )
+            .execute()
+            .strip()
+        )
         config["SECRETARY_LLM_MODEL"] = model
 
         api_key = inquirer.secret(
@@ -405,10 +439,14 @@ def main() -> None:
                 "Azure Config",
             )
             print()
-            azure_base = inquirer.text(
-                message="Azure endpoint URL (https://xxx.openai.azure.com/)",
-                validate=lambda v: v.strip().startswith("http") or "Must be a URL",
-            ).execute().strip()
+            azure_base = (
+                inquirer.text(
+                    message="Azure endpoint URL (https://xxx.openai.azure.com/)",
+                    validate=lambda v: v.strip().startswith("http") or "Must be a URL",
+                )
+                .execute()
+                .strip()
+            )
             config["AZURE_API_BASE"] = azure_base
             api_key = inquirer.secret(
                 message="Azure API key",
@@ -428,10 +466,14 @@ def main() -> None:
                 "AWS Bedrock",
             )
             print()
-            aws_region = inquirer.text(
-                message="AWS region",
-                default="us-east-1",
-            ).execute().strip()
+            aws_region = (
+                inquirer.text(
+                    message="AWS region",
+                    default="us-east-1",
+                )
+                .execute()
+                .strip()
+            )
             config["AWS_REGION_NAME"] = aws_region
             config["SECRETARY_LLM_API_KEY"] = ""
             success(f"Bedrock configured (region: {aws_region})")
@@ -533,16 +575,20 @@ def main() -> None:
         note(
             [
                 f"1. Go to {B}console.cloud.google.com/apis/credentials{R}",
-                f"2. Create OAuth 2.0 Client ID (Web application)",
+                "2. Create OAuth 2.0 Client ID (Web application)",
                 f"3. Redirect URI: {D}http://localhost:8000/web/settings/google/callback{R}",
-                f"4. Copy Client ID and Client Secret",
+                "4. Copy Client ID and Client Secret",
             ],
             "Google OAuth",
         )
         print()
-        config["SECRETARY_GOOGLE_CLIENT_ID"] = inquirer.text(
-            message="Google Client ID",
-        ).execute().strip()
+        config["SECRETARY_GOOGLE_CLIENT_ID"] = (
+            inquirer.text(
+                message="Google Client ID",
+            )
+            .execute()
+            .strip()
+        )
         config["SECRETARY_GOOGLE_CLIENT_SECRET"] = inquirer.secret(
             message="Google Client Secret",
         ).execute()
@@ -553,7 +599,7 @@ def main() -> None:
         print()
         note(
             [
-                f"Common CalDAV server URLs:",
+                "Common CalDAV server URLs:",
                 f"  iCloud:    {D}https://caldav.icloud.com{R}",
                 f"  Fastmail:  {D}https://caldav.fastmail.com/dav/calendars{R}",
                 f"  Nextcloud: {D}https://your-server/remote.php/dav{R}",
@@ -561,13 +607,21 @@ def main() -> None:
             "CalDAV",
         )
         print()
-        config["SECRETARY_CALDAV_URL"] = inquirer.text(
-            message="CalDAV server URL",
-            validate=lambda v: v.strip().startswith("http") or "URL must start with http(s)://",
-        ).execute().strip()
-        config["SECRETARY_CALDAV_USERNAME"] = inquirer.text(
-            message="CalDAV username",
-        ).execute().strip()
+        config["SECRETARY_CALDAV_URL"] = (
+            inquirer.text(
+                message="CalDAV server URL",
+                validate=lambda v: v.strip().startswith("http") or "URL must start with http(s)://",
+            )
+            .execute()
+            .strip()
+        )
+        config["SECRETARY_CALDAV_USERNAME"] = (
+            inquirer.text(
+                message="CalDAV username",
+            )
+            .execute()
+            .strip()
+        )
         config["SECRETARY_CALDAV_PASSWORD"] = inquirer.secret(
             message="CalDAV password",
         ).execute()

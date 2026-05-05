@@ -125,8 +125,7 @@ def test_decide_matrix(category_name, mode, expected_variant):
     result = decide(category, mode)
 
     assert isinstance(result, expected_cls), (
-        f"decide({category_name}, {mode!r}) returned {type(result).__name__}, "
-        f"expected {expected_variant}"
+        f"decide({category_name}, {mode!r}) returned {type(result).__name__}, expected {expected_variant}"
     )
 
 

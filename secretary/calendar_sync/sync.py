@@ -8,7 +8,6 @@ and upserts them into the local database, deduplicating on
 from __future__ import annotations
 
 import logging
-import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -17,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from secretary.calendar_sync.caldav_client import CalDAVSync
 from secretary.calendar_sync.google import GoogleCalendarSync
 from secretary.config.settings import settings
-from secretary.core.schemas import EventCreate, EventUpdate
+from secretary.core.schemas import EventCreate
 from secretary.db.models import Event
 
 logger = logging.getLogger(__name__)

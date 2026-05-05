@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,6 +23,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # -- Template globals -------------------------------------------------------
 
+
 def _is_overdue(task) -> bool:
     """Check if a task is overdue (for use in templates)."""
     if not task.due_at or task.status in ("done", "cancelled"):
@@ -39,6 +40,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Auth middleware
 # ---------------------------------------------------------------------------
+
 
 class TokenAuthMiddleware(BaseHTTPMiddleware):
     """Require auth_token cookie or ?token= query param when web_auth_token is set."""
@@ -96,9 +98,9 @@ def _auth_page() -> str:
 # Mount sub-routers
 # ---------------------------------------------------------------------------
 
-from secretary.web.routes.tasks import router as tasks_router      # noqa: E402
-from secretary.web.routes.events import router as events_router    # noqa: E402
-from secretary.web.routes.inbox import router as inbox_router      # noqa: E402
+from secretary.web.routes.tasks import router as tasks_router  # noqa: E402
+from secretary.web.routes.events import router as events_router  # noqa: E402
+from secretary.web.routes.inbox import router as inbox_router  # noqa: E402
 from secretary.web.routes.settings import router as settings_router  # noqa: E402
 from secretary.web.routes.history import router as history_router  # noqa: E402
 
@@ -113,6 +115,7 @@ router.include_router(history_router)
 # Root redirect
 # ---------------------------------------------------------------------------
 
+
 @router.get("/", response_class=HTMLResponse)
 async def web_root():
     return RedirectResponse(url="/web/tasks", status_code=302)
@@ -121,6 +124,7 @@ async def web_root():
 # ---------------------------------------------------------------------------
 # Mount static files
 # ---------------------------------------------------------------------------
+
 
 def mount_static(app):
     """Mount static files on the main app (sub-router mounts don't resolve correctly with prefixes)."""

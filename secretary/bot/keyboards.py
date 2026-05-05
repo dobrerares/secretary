@@ -49,9 +49,7 @@ def undo_keyboard(batch_id: str) -> InlineKeyboardMarkup:
     """Build undo button. batch_id is truncated to fit 64-byte limit."""
     short_id = batch_id[:20]
     return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="\u21a9 Undo", callback_data=f"undo:{short_id}")]
-        ]
+        inline_keyboard=[[InlineKeyboardButton(text="\u21a9 Undo", callback_data=f"undo:{short_id}")]]
     )
 
 

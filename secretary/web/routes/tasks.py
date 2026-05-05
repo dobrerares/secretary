@@ -3,11 +3,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secretary.config.settings import settings as app_settings
 from secretary.core.actions import get_recent_actions
 from secretary.core.schemas import SubtaskCreate, TaskCreate, TaskFilter, TaskUpdate
 from secretary.core.settings import get_settings
@@ -21,6 +20,7 @@ router = APIRouter(prefix="/tasks", tags=["web-tasks"])
 async def _undo_redirect(session: AsyncSession, url: str, msg: str) -> RedirectResponse:
     """Redirect with undo query params from the most recent action."""
     from urllib.parse import urlencode
+
     actions = await get_recent_actions(session, limit=1)
     if actions:
         sep = "&" if "?" in url else "?"
@@ -47,6 +47,7 @@ def _parse_dt(value: str | None) -> datetime | None:
 # ---------------------------------------------------------------------------
 # List
 # ---------------------------------------------------------------------------
+
 
 @router.get("", response_class=HTMLResponse)
 async def task_list(
@@ -84,27 +85,36 @@ async def task_list_partial(
     tasks = await list_tasks(session, filters)
     user_settings = await get_settings(session)
 
-    return templates.TemplateResponse(request, "tasks/_task_list.html", {
-        "tasks": tasks,
-        "areas": user_settings.areas or [],
-        "current_area": area or "",
-        "current_priority": priority or "",
-        "current_status": status or "",
-    })
+    return templates.TemplateResponse(
+        request,
+        "tasks/_task_list.html",
+        {
+            "tasks": tasks,
+            "areas": user_settings.areas or [],
+            "current_area": area or "",
+            "current_priority": priority or "",
+            "current_status": status or "",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
 # Create
 # ---------------------------------------------------------------------------
 
+
 @router.get("/new", response_class=HTMLResponse)
 async def task_new(request: Request, session: AsyncSession = Depends(get_session)):
     user_settings = await get_settings(session)
-    return templates.TemplateResponse(request, "tasks/form.html", {
-        "task": None,
-        "areas": user_settings.areas or [],
-        "editing": False,
-    })
+    return templates.TemplateResponse(
+        request,
+        "tasks/form.html",
+        {
+            "task": None,
+            "areas": user_settings.areas or [],
+            "editing": False,
+        },
+    )
 
 
 @router.post("", response_class=HTMLResponse)
@@ -145,12 +155,13 @@ async def task_create(
     await create_task(session, data, batch_id)
     await session.commit()
 
-    return await _undo_redirect(session, "/web/tasks", f"Task \"{data.title}\" created")
+    return await _undo_redirect(session, "/web/tasks", f'Task "{data.title}" created')
 
 
 # ---------------------------------------------------------------------------
 # Edit
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{task_id}/edit", response_class=HTMLResponse)
 async def task_edit(request: Request, task_id: int, session: AsyncSession = Depends(get_session)):
@@ -159,11 +170,15 @@ async def task_edit(request: Request, task_id: int, session: AsyncSession = Depe
         return RedirectResponse(url="/web/tasks", status_code=303)
 
     user_settings = await get_settings(session)
-    return templates.TemplateResponse(request, "tasks/form.html", {
-        "task": task,
-        "areas": user_settings.areas or [],
-        "editing": True,
-    })
+    return templates.TemplateResponse(
+        request,
+        "tasks/form.html",
+        {
+            "task": task,
+            "areas": user_settings.areas or [],
+            "editing": True,
+        },
+    )
 
 
 @router.post("/{task_id}", response_class=HTMLResponse)
@@ -204,12 +219,13 @@ async def task_update(
     await update_task(session, task_id, data, batch_id)
     await session.commit()
 
-    return await _undo_redirect(session, "/web/tasks", f"Task \"{data.title}\" updated")
+    return await _undo_redirect(session, "/web/tasks", f'Task "{data.title}" updated')
 
 
 # ---------------------------------------------------------------------------
 # Quick actions (HTMX)
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{task_id}/complete", response_class=HTMLResponse)
 async def task_complete(request: Request, task_id: int, session: AsyncSession = Depends(get_session)):
