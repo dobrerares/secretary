@@ -5,30 +5,16 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secretary.ai.client import LLMClient
 from secretary.ai.executor import execute_tool
 from secretary.ai.system_prompt import render_system_prompt
-from secretary.ai.tools import TOOL_NAMES, TOOLS
-from secretary.ai.validation import area_is_known, is_destructive
+from secretary.ai.tools import BY_NAME, ToolCategory, llm_schema
+from secretary.ai.validation import area_is_known
 from secretary.config.settings import settings as app_settings
-from secretary.core.schemas import (
-    EventCreateArgs,
-    EventDeleteArgs,
-    EventUpdateArgs,
-    GetBriefingArgs,
-    ListEventsArgs,
-    ListTasksArgs,
-    ReadSettingsArgs,
-    TaskCompleteArgs,
-    TaskCreateArgs,
-    TaskDeleteArgs,
-    TaskUpdateArgs,
-    UpdateMemoryArgs,
-)
 from secretary.core.settings import get_settings
 from secretary.db.models import ChatMessage
 
@@ -36,25 +22,6 @@ logger = logging.getLogger(__name__)
 
 MAX_TOOL_ITERATIONS = 5
 DEFAULT_HISTORY_LIMIT = 20
-READ_ONLY_TOOLS = {"list_tasks", "list_events", "get_briefing", "read_settings"}
-
-# Per-tool Pydantic schema dispatcher. Issue #3 will replace this with a
-# proper Tool registry; for now this maps each tool name to the schema that
-# validates the structural shape of its `args` payload.
-_TOOL_ARG_SCHEMAS: dict[str, type[BaseModel]] = {
-    "create_task": TaskCreateArgs,
-    "update_task": TaskUpdateArgs,
-    "complete_task": TaskCompleteArgs,
-    "delete_task": TaskDeleteArgs,
-    "list_tasks": ListTasksArgs,
-    "create_event": EventCreateArgs,
-    "update_event": EventUpdateArgs,
-    "delete_event": EventDeleteArgs,
-    "list_events": ListEventsArgs,
-    "get_briefing": GetBriefingArgs,
-    "read_settings": ReadSettingsArgs,
-    "update_memory": UpdateMemoryArgs,
-}
 
 # Tool args fields that carry an area string -- checked against runtime areas
 # (Pydantic cannot validate this since user areas are runtime config).
@@ -69,15 +36,15 @@ _AREA_BEARING_TOOLS = {
 
 
 def _args_are_valid(tool: str, args: dict, user_areas: list[str]) -> bool:
-    """Return True if `args` validates against `tool`'s Pydantic schema and
-    references a known area (when applicable).
+    """Return True if `args` validates against the Tool registry's schema
+    and references a known area (when applicable).
     """
-    schema = _TOOL_ARG_SCHEMAS.get(tool)
-    if schema is None:
+    spec = BY_NAME.get(tool)
+    if spec is None:
         # Unknown tool -- not safe to auto-execute.
         return False
     try:
-        schema.model_validate(args or {})
+        spec.args_schema.model_validate(args or {})
     except ValidationError:
         return False
     if tool in _AREA_BEARING_TOOLS:
@@ -146,7 +113,7 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
 
     # 5-9. LLM call loop
     for iteration in range(MAX_TOOL_ITERATIONS):
-        response = await client.chat(messages, tools=TOOLS)
+        response = await client.chat(messages, tools=llm_schema())
 
         choice = response["choices"][0]
         assistant_msg = choice["message"]
@@ -188,7 +155,7 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
                 arguments = {}
                 logger.warning("Failed to parse tool call arguments: %s", raw_args)
 
-            if tool_name not in TOOL_NAMES:
+            if tool_name not in BY_NAME:
                 # Unknown tool -- return error to the LLM
                 tool_result = {"error": f"Unknown tool: {tool_name}"}
                 tool_result_str = json.dumps(tool_result)
@@ -215,7 +182,7 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
                     "tool_results": {"call_id": call_id, "result": result},
                 })
                 # Track auto-executed mutating actions for status reporting
-                if tool_name not in READ_ONLY_TOOLS:
+                if BY_NAME[tool_name].category != ToolCategory.READ:
                     executed_actions.append({
                         "tool": tool_name,
                         "args": arguments,
@@ -262,33 +229,35 @@ async def process_message(session: AsyncSession, user_text: str) -> Conversation
 def _should_auto_execute(action: dict, auto_mode: str, areas: list[str]) -> bool:
     """Decide whether a tool call should be executed immediately.
 
-    Rules:
-    - "off": nothing auto-executes (except read-only)
-    - "standard": non-destructive + validation passes => execute; deletes go to review
-    - "aggressive": everything that passes validation, INCLUDING destructive
-    - "silent": same as aggressive
-    - Read-only tools (list_tasks, list_events, get_briefing, read_settings)
-      always auto-execute regardless of mode, since they don't mutate data
+    Rules from CONTEXT.md "Tool category":
+    - READ tools always auto-execute (never gated)
+    - "off": nothing else auto-executes
+    - "standard": WRITE auto-executes; DESTRUCTIVE_WRITE goes to review
+    - "aggressive" / "silent": WRITE and DESTRUCTIVE_WRITE both auto-execute
+      if validation passes
     """
     tool = action.get("tool", "")
     args = action.get("args") or {}
 
-    # Read-only tools always execute
-    if tool in READ_ONLY_TOOLS:
+    spec = BY_NAME.get(tool)
+    if spec is None:
+        return False
+
+    # READ never gated.
+    if spec.category == ToolCategory.READ:
         return True
 
     if auto_mode == "off":
         return False
 
     if auto_mode in ("aggressive", "silent"):
-        # Auto-approve everything that passes validation, including destructive
         return _args_are_valid(tool, args, areas)
 
-    # "standard" mode: destructive actions go to review
-    if is_destructive(tool):
+    # "standard" mode: DESTRUCTIVE_WRITE goes to review.
+    if spec.category == ToolCategory.DESTRUCTIVE_WRITE:
         return False
 
-    # For standard: validate then execute
+    # WRITE: validate then execute.
     return _args_are_valid(tool, args, areas)
 
 
