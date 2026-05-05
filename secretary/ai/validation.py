@@ -1,19 +1,24 @@
 """Domain helpers for the auto-approve gate.
 
 Pydantic owns the structural validity of tool args (see core/schemas.py).
-This module only carries domain decisions Pydantic cannot make: which tools
-are destructive, and whether an area is one the user has configured.
+The Tool registry (see secretary/ai/tools) owns each tool's category. This
+module only carries domain checks neither of those can make at construction
+time — most importantly whether an area is one the user has configured.
 """
 
-# Tool calls that destroy data. In standard mode these require explicit
-# approval; in aggressive/silent mode they may be auto-approved if their
-# args validate.
-_DESTRUCTIVE_TOOLS = {"delete_task", "delete_event"}
+from secretary.ai.tools import BY_NAME, ToolCategory
 
 
 def is_destructive(tool: str) -> bool:
-    """Return True if the named tool destroys data."""
-    return tool in _DESTRUCTIVE_TOOLS
+    """Return True if the named tool destroys data.
+
+    Thin wrapper over the Tool registry's ``ToolCategory.DESTRUCTIVE_WRITE``
+    — kept for callers that want a tool-name-string predicate. Unknown tool
+    names are treated as non-destructive (the dispatcher will reject them
+    independently).
+    """
+    spec = BY_NAME.get(tool)
+    return spec is not None and spec.category == ToolCategory.DESTRUCTIVE_WRITE
 
 
 def area_is_known(area: str | None, user_areas: list[str]) -> bool:
