@@ -169,3 +169,99 @@ def format_inbox_item(item) -> str:
     if len(item.raw_text) > 300:
         text += "..."
     return f"{emoji} #{item.id} [{item.status}] ({item.source})\n{text}"
+
+
+# ---------------------------------------------------------------------------
+# Proposed-action / executed-action formatters
+# ---------------------------------------------------------------------------
+
+_TOOL_LABELS = {
+    "create_task": ("Create task", "\U0001f4cb"),
+    "update_task": ("Update task", "\u270f\ufe0f"),
+    "complete_task": ("Complete task", "\u2705"),
+    "delete_task": ("Delete task", "\U0001f5d1"),
+    "create_event": ("Create event", "\U0001f4c5"),
+    "update_event": ("Update event", "\u270f\ufe0f"),
+    "delete_event": ("Delete event", "\U0001f5d1"),
+    "update_memory": ("Remember", "\U0001f9e0"),
+}
+
+_EXECUTED_LABELS = {
+    "create_task": "Created task",
+    "update_task": "Updated task",
+    "complete_task": "Completed task",
+    "delete_task": "Deleted task",
+    "create_event": "Created event",
+    "update_event": "Updated event",
+    "delete_event": "Deleted event",
+    "update_memory": "Remembered",
+}
+
+
+def format_proposal(action: dict) -> str:
+    """Format a Proposed action as a Telegram suggestion card.
+
+    ``action`` is a dict from ``InboxItem.proposed_actions`` carrying
+    ``tool``, ``args``, optional ``reason``, ``action_id``, ``status``.
+    """
+    tool = action.get("tool", "unknown")
+    args = action.get("args", {}) or {}
+    label, emoji = _TOOL_LABELS.get(tool, (tool, "\u2753"))
+
+    lines = [f"{emoji} <b>Suggestion: {label}</b>"]
+
+    if "title" in args:
+        lines.append(f"  Title: {args['title']}")
+    if "area" in args:
+        lines.append(f"  Area: {args['area']}")
+    if "priority" in args and args["priority"] != "none":
+        lines.append(f"  Priority: {str(args['priority']).title()}")
+    if "due_at" in args:
+        lines.append(f"  Due: {args['due_at']}")
+    if "start_at" in args:
+        lines.append(f"  Start: {args['start_at']}")
+    if "end_at" in args:
+        lines.append(f"  End: {args['end_at']}")
+    if "location" in args:
+        lines.append(f"  Location: {args['location']}")
+    if "description" in args and args["description"]:
+        desc = str(args["description"])[:100]
+        lines.append(f"  Description: {desc}")
+    if "fact" in args:
+        lines.append(f"  Fact: {args['fact']}")
+    if "task_id" in args:
+        lines.append(f"  Task ID: {args['task_id']}")
+    if "event_id" in args:
+        lines.append(f"  Event ID: {args['event_id']}")
+
+    reason = action.get("reason")
+    if reason:
+        lines.append(f"  <i>{reason}</i>")
+
+    return "\n".join(lines)
+
+
+def format_status_report(action: dict) -> str:
+    """Format an auto-executed action as a status-report line.
+
+    ``action`` is an executed entry from
+    :class:`secretary.ai.conversation.ProcessResult.executed`:
+    ``{"tool", "args", "batch_id", "silent", "result"}``.
+    """
+    tool = action.get("tool", "unknown")
+    args = action.get("args", {}) or {}
+    label = _EXECUTED_LABELS.get(tool, tool)
+
+    head = f"\u2705 Auto-approved: {label}"
+    title = args.get("title") or args.get("fact")
+    if title:
+        head += f" '{title}'"
+
+    parts = [head]
+    if "due_at" in args:
+        parts.append(f"Due: {args['due_at']}")
+    if "start_at" in args:
+        parts.append(f"Start: {args['start_at']}")
+    if "area" in args:
+        parts.append(f"Area: {args['area']}")
+    return " \u2014 ".join(parts)
