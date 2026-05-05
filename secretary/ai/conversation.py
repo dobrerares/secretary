@@ -5,6 +5,7 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,8 +13,22 @@ from secretary.ai.client import LLMClient
 from secretary.ai.executor import execute_tool
 from secretary.ai.system_prompt import render_system_prompt
 from secretary.ai.tools import TOOL_NAMES, TOOLS
-from secretary.ai.validation import is_destructive, validate_proposed_action
+from secretary.ai.validation import area_is_known, is_destructive
 from secretary.config.settings import settings as app_settings
+from secretary.core.schemas import (
+    EventCreateArgs,
+    EventDeleteArgs,
+    EventUpdateArgs,
+    GetBriefingArgs,
+    ListEventsArgs,
+    ListTasksArgs,
+    ReadSettingsArgs,
+    TaskCompleteArgs,
+    TaskCreateArgs,
+    TaskDeleteArgs,
+    TaskUpdateArgs,
+    UpdateMemoryArgs,
+)
 from secretary.core.settings import get_settings
 from secretary.db.models import ChatMessage
 
@@ -22,6 +37,53 @@ logger = logging.getLogger(__name__)
 MAX_TOOL_ITERATIONS = 5
 DEFAULT_HISTORY_LIMIT = 20
 READ_ONLY_TOOLS = {"list_tasks", "list_events", "get_briefing", "read_settings"}
+
+# Per-tool Pydantic schema dispatcher. Issue #3 will replace this with a
+# proper Tool registry; for now this maps each tool name to the schema that
+# validates the structural shape of its `args` payload.
+_TOOL_ARG_SCHEMAS: dict[str, type[BaseModel]] = {
+    "create_task": TaskCreateArgs,
+    "update_task": TaskUpdateArgs,
+    "complete_task": TaskCompleteArgs,
+    "delete_task": TaskDeleteArgs,
+    "list_tasks": ListTasksArgs,
+    "create_event": EventCreateArgs,
+    "update_event": EventUpdateArgs,
+    "delete_event": EventDeleteArgs,
+    "list_events": ListEventsArgs,
+    "get_briefing": GetBriefingArgs,
+    "read_settings": ReadSettingsArgs,
+    "update_memory": UpdateMemoryArgs,
+}
+
+# Tool args fields that carry an area string -- checked against runtime areas
+# (Pydantic cannot validate this since user areas are runtime config).
+_AREA_BEARING_TOOLS = {
+    "create_task",
+    "update_task",
+    "create_event",
+    "update_event",
+    "list_tasks",
+    "list_events",
+}
+
+
+def _args_are_valid(tool: str, args: dict, user_areas: list[str]) -> bool:
+    """Return True if `args` validates against `tool`'s Pydantic schema and
+    references a known area (when applicable).
+    """
+    schema = _TOOL_ARG_SCHEMAS.get(tool)
+    if schema is None:
+        # Unknown tool -- not safe to auto-execute.
+        return False
+    try:
+        schema.model_validate(args or {})
+    except ValidationError:
+        return False
+    if tool in _AREA_BEARING_TOOLS:
+        if not area_is_known((args or {}).get("area"), user_areas):
+            return False
+    return True
 
 
 @dataclass
@@ -209,6 +271,7 @@ def _should_auto_execute(action: dict, auto_mode: str, areas: list[str]) -> bool
       always auto-execute regardless of mode, since they don't mutate data
     """
     tool = action.get("tool", "")
+    args = action.get("args") or {}
 
     # Read-only tools always execute
     if tool in READ_ONLY_TOOLS:
@@ -219,14 +282,14 @@ def _should_auto_execute(action: dict, auto_mode: str, areas: list[str]) -> bool
 
     if auto_mode in ("aggressive", "silent"):
         # Auto-approve everything that passes validation, including destructive
-        return validate_proposed_action(action, areas)
+        return _args_are_valid(tool, args, areas)
 
     # "standard" mode: destructive actions go to review
-    if is_destructive(action):
+    if is_destructive(tool):
         return False
 
     # For standard: validate then execute
-    return validate_proposed_action(action, areas)
+    return _args_are_valid(tool, args, areas)
 
 
 async def _load_chat_history(session: AsyncSession, limit: int = DEFAULT_HISTORY_LIMIT) -> list[dict]:
