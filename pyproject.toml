@@ -38,7 +38,7 @@ dependencies = [
     # Config
     "pydantic-settings>=2.7",
     # HTTP client
-    "httpx>=0.28",
+    "httpx>=0.28.1",
     # Form parsing
     "python-multipart>=0.0.9",
     # Onboarding wizard
